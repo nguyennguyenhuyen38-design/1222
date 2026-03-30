@@ -1,8 +1,10 @@
--- chống load lại nhiều lần
 if getgenv()._LOADED_COMBINED_SCRIPT then return end
 getgenv()._LOADED_COMBINED_SCRIPT = true
 
--- hàm load an toàn (tránh lỗi làm crash script)
+pcall(function()
+    setfpscap(10)
+end)
+
 local function safeLoad(url, name)
     local success, result = pcall(function()
         return game:HttpGet(url)
@@ -13,40 +15,113 @@ local function safeLoad(url, name)
         return
     end
 
-    local func, err = loadstring(result)
+    local func = loadstring(result)
     if not func then
         warn("[ERROR] Lỗi loadstring: " .. name)
         return
     end
 
-    local ok, execErr = pcall(func)
+    local ok = pcall(func)
     if not ok then
         warn("[ERROR] Lỗi chạy script: " .. name)
     end
 end
 
--- =========================
--- SCRIPT 1
--- =========================
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local Stats = game:GetService("Stats")
+local player = Players.LocalPlayer
+
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "BlackScreenGui"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.IgnoreGuiInset = true
+ScreenGui.Parent = game.CoreGui
+
+local Frame = Instance.new("Frame")
+Frame.Size = UDim2.new(1, 0, 1, 0)
+Frame.BackgroundColor3 = Color3.new(0, 0, 0)
+Frame.BorderSizePixel = 0
+Frame.Parent = ScreenGui
+
+local Label = Instance.new("TextLabel")
+Label.Size = UDim2.new(0, 500, 0, 200)
+Label.Position = UDim2.new(0.5, -250, 0.5, -100)
+Label.BackgroundTransparency = 1
+Label.TextColor3 = Color3.new(1, 1, 1)
+Label.TextXAlignment = Enum.TextXAlignment.Center
+Label.TextYAlignment = Enum.TextYAlignment.Center
+Label.TextSize = 36
+Label.Parent = ScreenGui
+
+pcall(function()
+    Label.FontFace = Font.new("rbxasset://fonts/families/NunitoRounded.json", Enum.FontWeight.ExtraBold)
+end)
+
+local ToggleBtn = Instance.new("TextButton")
+ToggleBtn.Size = UDim2.new(0, 50, 0, 50)
+ToggleBtn.Position = UDim2.new(1, -60, 0, 10)
+ToggleBtn.BackgroundTransparency = 1
+ToggleBtn.RichText = true
+ToggleBtn.TextScaled = true
+ToggleBtn.Parent = ScreenGui
+
+local enabled = true
+
+local function updateIcon()
+    if enabled then
+        ToggleBtn.Text = '<font color="rgb(0,255,0)">></font>'
+    else
+        ToggleBtn.Text = '<font color="rgb(255,0,0)">X</font>'
+    end
+end
+
+ToggleBtn.MouseButton1Click:Connect(function()
+    enabled = not enabled
+    Frame.Visible = enabled
+    Label.Visible = enabled
+    updateIcon()
+end)
+
+updateIcon()
+
+local fps = 0
+local last = tick()
+local frames = 0
+
+RunService.RenderStepped:Connect(function()
+    frames += 1
+    local now = tick()
+
+    if now - last >= 1 then
+        fps = frames
+        frames = 0
+        last = now
+    end
+
+    if enabled then
+        local mem = math.floor(Stats:GetTotalMemoryUsageMb())
+        local ping = math.floor(player:GetNetworkPing() * 1000)
+
+        Label.Text =
+            "FPS: " .. fps ..
+            "\nPING: " .. ping .. " ms" ..
+            "\nRAM: " .. mem .. " MB"
+    end
+end)
+
 safeLoad(
     "https://raw.githubusercontent.com/canhongson/CanHongSon/refs/heads/main/loader.lua",
     "CanHongSon Loader"
 )
 
--- nghỉ nhẹ tránh xung đột
 task.wait(1)
 
--- =========================
--- SETTINGS SCRIPT 2
--- =========================
 getgenv().Hermanos_Settings = {
     ['key'] = '1bae13a2-6ed4-44a1-85e7-0b39375337ff',
     ['PC'] = 'CHANGE-ME',
 }
 
--- =========================
--- SCRIPT 2 (chạy song song)
--- =========================
 task.spawn(function()
     safeLoad(
         "https://raw.githubusercontent.com/hermanos-dev/hermanos-script/main/sailorpiece-main.lua",
