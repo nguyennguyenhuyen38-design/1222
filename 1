@@ -1,10 +1,26 @@
 if getgenv()._LOADED_COMBINED_SCRIPT then return end
 getgenv()._LOADED_COMBINED_SCRIPT = true
 
-pcall(function()
-    setfpscap(10)
+-- ================= FPS CONTROL =================
+local enabled = true
+
+-- Delay 3s rồi mới bắt đầu lock FPS
+task.delay(3, function()
+    task.spawn(function()
+        while true do
+            pcall(function()
+                if enabled then
+                    setfpscap(10) -- bật: 10 FPS
+                else
+                    setfpscap(60) -- tắt: 60 FPS
+                end
+            end)
+            task.wait(1) -- nhẹ, không lag
+        end
+    end)
 end)
 
+-- ================= SAFE LOAD =================
 local function safeLoad(url, name)
     local success, result = pcall(function()
         return game:HttpGet(url)
@@ -27,11 +43,13 @@ local function safeLoad(url, name)
     end
 end
 
+-- ================= SERVICES =================
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local Stats = game:GetService("Stats")
 local player = Players.LocalPlayer
 
+-- ================= UI =================
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "BlackScreenGui"
 ScreenGui.ResetOnSpawn = false
@@ -66,8 +84,6 @@ ToggleBtn.RichText = true
 ToggleBtn.TextScaled = true
 ToggleBtn.Parent = ScreenGui
 
-local enabled = true
-
 local function updateIcon()
     if enabled then
         ToggleBtn.Text = '<font color="rgb(0,255,0)">></font>'
@@ -78,13 +94,25 @@ end
 
 ToggleBtn.MouseButton1Click:Connect(function()
     enabled = not enabled
+
     Frame.Visible = enabled
     Label.Visible = enabled
+
+    -- set ngay lập tức để không delay
+    pcall(function()
+        if enabled then
+            setfpscap(10)
+        else
+            setfpscap(60)
+        end
+    end)
+
     updateIcon()
 end)
 
 updateIcon()
 
+-- ================= FPS / PING / RAM =================
 local fps = 0
 local last = tick()
 local frames = 0
@@ -110,6 +138,7 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
+-- ================= LOAD SCRIPT =================
 safeLoad(
     "https://raw.githubusercontent.com/canhongson/CanHongSon/refs/heads/main/loader.lua",
     "CanHongSon Loader"
