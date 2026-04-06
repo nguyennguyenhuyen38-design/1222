@@ -143,17 +143,3 @@ safeLoad(
     "https://raw.githubusercontent.com/canhongson/CanHongSon/refs/heads/main/loader.lua",
     "CanHongSon Loader"
 )
-
-task.wait(1)
-
-getgenv().Hermanos_Settings = {
-    ['key'] = '1bae13a2-6ed4-44a1-85e7-0b39375337ff',
-    ['PC'] = 'CHANGE-ME',
-}
-
-task.spawn(function()
-    safeLoad(
-        "https://raw.githubusercontent.com/hermanos-dev/hermanos-script/main/sailorpiece-main.lua",
-        "Hermanos Script"
-    )
-end)
