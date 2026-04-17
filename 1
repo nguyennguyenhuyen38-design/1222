@@ -2,17 +2,13 @@ if getgenv()._LOADED_COMBINED_SCRIPT then return end
 getgenv()._LOADED_COMBINED_SCRIPT = true
 
 -- ================= CONFIG =================
-getgenv().delay = 2 -- heartbeat delay cho online checker (2 giây)
 local fpsLockEnabled = true
 
 -- ================= SERVICES =================
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local Stats = game:GetService("Stats")
-local TeleportService = game:GetService("TeleportService")
-local GuiService = game:GetService("GuiService")
 local StarterGui = game:GetService("StarterGui")
-local HttpService = game:GetService("HttpService")
 local LocalPlayer = Players.LocalPlayer
 
 -- ================= SAFE LOAD FUNCTION =================
@@ -138,148 +134,11 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- ================= FYNIX ONLINE CHECKER =================
-local folderPath = "CheckOnlineFynix"
-local filePath = folderPath .. "/" .. tostring(LocalPlayer.UserId) .. "_online.txt"
-
-if not isfolder(folderPath) then
-    makefolder(folderPath)
-end
-
-local function buildData(status)
-    return {
-        placeId = game.PlaceId,
-        date = os.date("%Y-%m-%d %H:%M:%S"),
-        timestamp = os.time(),
-        status = status,
-        jobId = game.JobId
-    }
-end
-
-local function writeState(status)
-    pcall(function()
-        local data = buildData(status or "Online")
-        local encoded = HttpService:JSONEncode(data)
-        writefile(filePath, encoded)
-    end)
-end
-
-pcall(function()
-    if not isfile(filePath) then
-        task.wait(1)
-        writeState("Offline")
-    end
-end)
-
-local onlineActive = false
-local shuttingDown = false
-
-local function setOnline()
-    if shuttingDown then return end
-    if onlineActive then return end
-    onlineActive = true
-    writeState("Online")
-    notify("Fynix", "Status: ONLINE", 3)
-end
-
-local function setOffline()
-    if shuttingDown then return end
-    shuttingDown = true
-    onlineActive = false
-    writeState("Offline")
-    notify("Fynix", "Status: OFFLINE", 3)
-end
-
--- ================= REJOIN SYSTEM =================
-local lastHeartbeat = tick()
-local isRejoining = false
-
-local function safeRejoin(reason)
-    if isRejoining then return end
-    isRejoining = true
-    warn("[FYNIX] Rejoining due to:", reason)
-    task.wait(1)
-    pcall(function()
-        TeleportService:Teleport(game.PlaceId, LocalPlayer)
-    end)
-end
-
-LocalPlayer.CharacterRemoving:Connect(function()
-    task.wait(1)
-    if not LocalPlayer.Character then
-        safeRejoin("Character lost")
-    end
-end)
-
-Players.PlayerRemoving:Connect(function(plr)
-    if plr == LocalPlayer then
-        safeRejoin("PlayerRemoving")
-    end
-end)
-
-pcall(function()
-    LocalPlayer.OnTeleport:Connect(function(state)
-        if state == Enum.TeleportState.Failed then
-            safeRejoin("Teleport failed")
-        end
-    end)
-end)
-
-pcall(function()
-    local CoreGui = game:GetService("CoreGui")
-    CoreGui.ChildAdded:Connect(function(child)
-        if child.Name == "ErrorPrompt" then
-            local text = ""
-            pcall(function()
-                text = child:FindFirstChildWhichIsA("TextLabel").Text
-            end)
-            if text ~= "" then
-                safeRejoin("ErrorPrompt: " .. text)
-            end
-        end
-    end)
-end)
-
-pcall(function()
-    GuiService.ErrorMessageChanged:Connect(function(msg)
-        if msg and msg ~= "" then
-            safeRejoin("ErrorMessage: " .. msg)
-        end
-    end)
-end)
-
-RunService.Heartbeat:Connect(function()
-    lastHeartbeat = tick()
-end)
-
+-- ================= INIT =================
 task.spawn(function()
-    while task.wait(5) do
-        if tick() - lastHeartbeat > 20 then
-            safeRejoin("Heartbeat freeze")
-        end
-    end
-end)
-
--- ================= INIT ONLINE & HEARTBEAT =================
-task.spawn(function()
-    notify("Fynix", "Script Loaded", 3)
+    notify("BlackScreen", "FPS Lock Ready - Click > to toggle", 3)
     if not game:IsLoaded() then
         game.Loaded:Wait()
-    end
-    if LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait() then
-        task.wait(2)
-        setOnline()
-    end
-end)
-
-task.spawn(function()
-    while true do
-        task.wait(getgenv().delay)
-        if onlineActive and not shuttingDown then
-            pcall(function()
-                writeState("Online")
-            end)
-        end
     end
 end)
 
