@@ -1,16 +1,18 @@
 -- ================= CONFIG (CHỈNH SỬA TRỰC TIẾP TRONG SCRIPT) =================
-local RAM_LIMIT_MB = 2500                -- Giới hạn RAM (MB)
-local FPS_CAP = 10                       -- FPS khi bật black screen
-local RAINBOW_ENABLED = true             -- Hiệu ứng cầu vồng cho toàn bộ chữ (trừ title)
-local RAINBOW_SPEED = 3.0                -- Tốc độ đổi màu (giây)
-local AUTO_CRASH_ENABLED = true          -- true = bật auto crash, false = tắt
-local DISCORD_INVITE = ".gg/YXdEJruW"    -- Link Discord (tự copy khi click)
+local RAM_LIMIT_MB = 2500
+local FPS_CAP = 10
+local RAINBOW_ENABLED = true
+local RAINBOW_SPEED = 3.0
+local AUTO_CRASH_ENABLED = true
+local DISCORD_INVITE = ".gg/YXdEJruW"
+local LOGO_IMAGE_ID = "rbxassetid://1234567890"  -- THAY BẰNG ID ẢNH CỦA BẠN
 
 -- ================= SERVICES =================
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local Stats = game:GetService("Stats")
 local StarterGui = game:GetService("StarterGui")
+local TweenService = game:GetService("TweenService")
 local LocalPlayer = Players.LocalPlayer
 
 -- ================= STATE =================
@@ -20,26 +22,6 @@ local autoCrashEnabled = AUTO_CRASH_ENABLED
 -- ================= NOTIFICATION =================
 local function notify(title, text, dur)
     pcall(function() StarterGui:SetCore("SendNotification", { Title = title, Text = text, Duration = dur or 3 }) end)
-end
-
--- ================= HSV TO RGB (RAINBOW) =================
-local function HSVtoRGB(h, s, v)
-    h = h % 1
-    local r, g, b
-    local i = math.floor(h * 6)
-    local f = h * 6 - i
-    local p = v * (1 - s)
-    local q = v * (1 - f * s)
-    local t = v * (1 - (1 - f) * s)
-    i = i % 6
-    if i == 0 then r, g, b = v, t, p
-    elseif i == 1 then r, g, b = q, v, p
-    elseif i == 2 then r, g, b = p, v, t
-    elseif i == 3 then r, g, b = p, q, v
-    elseif i == 4 then r, g, b = t, p, v
-    elseif i == 5 then r, g, b = v, p, q
-    end
-    return Color3.new(r, g, b)
 end
 
 -- ================= AUTO CRASH MONITOR =================
@@ -73,6 +55,26 @@ task.spawn(function()
     end
 end)
 
+-- ================= HSV TO RGB (RAINBOW) =================
+local function HSVtoRGB(h, s, v)
+    h = h % 1
+    local r, g, b
+    local i = math.floor(h * 6)
+    local f = h * 6 - i
+    local p = v * (1 - s)
+    local q = v * (1 - f * s)
+    local t = v * (1 - (1 - f) * s)
+    i = i % 6
+    if i == 0 then r, g, b = v, t, p
+    elseif i == 1 then r, g, b = q, v, p
+    elseif i == 2 then r, g, b = p, v, t
+    elseif i == 3 then r, g, b = p, q, v
+    elseif i == 4 then r, g, b = t, p, v
+    elseif i == 5 then r, g, b = v, p, q
+    end
+    return Color3.new(r, g, b)
+end
+
 -- ================= UI CONSTRUCTION =================
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "BlackScreenOverlay"
@@ -92,21 +94,11 @@ Background.Visible = blackScreenEnabled
 Background.ZIndex = 1
 Background.Parent = ScreenGui
 
--- ===== SCREEN GUI =====
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "StatusUI"
-ScreenGui.ResetOnSpawn = false
-ScreenGui.IgnoreGuiInset = true
-ScreenGui.DisplayOrder = 999999
-ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Global
-ScreenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
-
--- ===== SCROLLING CONTAINER =====
+-- ===== THANH TRẠNG THÁI (LOGIC CỦA MÀY) =====
 local InfoContainer = Instance.new("ScrollingFrame")
 InfoContainer.Size = UDim2.new(1, -20, 0, 44)
 InfoContainer.Position = UDim2.new(0.5, 0, 0, 8)
 InfoContainer.AnchorPoint = Vector2.new(0.5, 0)
-
 InfoContainer.BackgroundTransparency = 1
 InfoContainer.BorderSizePixel = 0
 InfoContainer.ScrollBarThickness = 0
@@ -114,30 +106,25 @@ InfoContainer.ScrollingDirection = Enum.ScrollingDirection.X
 InfoContainer.CanvasSize = UDim2.new(0, 0, 0, 0)
 InfoContainer.AutomaticCanvasSize = Enum.AutomaticSize.X
 InfoContainer.ClipsDescendants = false
+InfoContainer.ZIndex = 10
 InfoContainer.Parent = ScreenGui
 
--- ===== INNER BAR =====
 local InfoBar = Instance.new("Frame")
 InfoBar.Size = UDim2.new(0, 0, 1, 0)
 InfoBar.BackgroundTransparency = 1
 InfoBar.BorderSizePixel = 0
 InfoBar.AutomaticSize = Enum.AutomaticSize.X
-InfoBar.Parent = InfoContainer
-
--- 🔥 FIX CENTER STABILITY
 InfoBar.AnchorPoint = Vector2.new(0.5, 0)
 InfoBar.Position = UDim2.new(0.5, 0, 0, 0)
+InfoBar.Parent = InfoContainer
 
--- ===== LAYOUT =====
-local layout = Instance.new("UIListLayout")
-layout.Parent = InfoBar
+local layout = Instance.new("UIListLayout", InfoBar)
 layout.FillDirection = Enum.FillDirection.Horizontal
 layout.HorizontalAlignment = Enum.HorizontalAlignment.Left
 layout.VerticalAlignment = Enum.VerticalAlignment.Center
 layout.Padding = UDim.new(0, 6)
 layout.Wraps = false
 
--- ===== LABEL FACTORY =====
 local function createStatusLabel(text)
     local lbl = Instance.new("TextLabel")
     lbl.BackgroundTransparency = 1
@@ -152,43 +139,29 @@ local function createStatusLabel(text)
     return lbl
 end
 
--- ===== STATUS ELEMENTS =====
 local crashPrefix = createStatusLabel("Auto Crash:")
 local crashIcon = createStatusLabel("")
 crashIcon.RichText = true
-
 local paren1 = createStatusLabel("(")
 local ramLabel = createStatusLabel("")
-
 local paren2 = createStatusLabel("MB)")
-local sep1 = createStatusLabel("|")
-
+local sep2 = createStatusLabel("|")
 local fpsPrefix = createStatusLabel("FPS:")
 local fpsValue = createStatusLabel("0")
-
-local sep2 = createStatusLabel("|")
-
+local sep3 = createStatusLabel("|")
 local pingPrefix = createStatusLabel("Ping:")
 local pingValue = createStatusLabel("0")
 
--- ===== OPTIONAL: LABEL LIST =====
-local statusLabels = {
-    crashPrefix,
-    paren1,
-    paren2,
-    sep1,
-    fpsPrefix,
-    sep2,
-    pingPrefix
-}
+local statusLabels = { crashPrefix, paren1, paren2, sep2, fpsPrefix, sep3, pingPrefix }
 
--- ===== NỘI DUNG CHÍNH GIỮA MÀN HÌNH =====
+-- ===== NỘI DUNG CHÍNH GIỮA MÀN HÌNH (HIỆN KHI BẬT BLACK SCREEN) =====
 local CenterFrame = Instance.new("Frame")
 CenterFrame.Size = UDim2.new(0, 500, 0, 220)
 CenterFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
 CenterFrame.AnchorPoint = Vector2.new(0.5, 0.5)
 CenterFrame.BackgroundTransparency = 1
 CenterFrame.ZIndex = 10
+CenterFrame.Visible = blackScreenEnabled
 CenterFrame.Parent = ScreenGui
 
 local titleLabel = Instance.new("TextLabel")
@@ -237,6 +210,24 @@ discordLabel.MouseButton1Click:Connect(function()
     end)
 end)
 
+-- ===== LOGO KÉO THẢ (HIỆN KHI TẮT BLACK SCREEN) =====
+local LogoButton = Instance.new("ImageButton")
+LogoButton.Size = UDim2.new(0, 80, 0, 80)
+LogoButton.Position = UDim2.new(0.5, -40, 0.5, -40)
+LogoButton.BackgroundTransparency = 1
+LogoButton.Image = LOGO_IMAGE_ID
+LogoButton.ImageColor3 = Color3.new(1,1,1)
+LogoButton.ScaleType = Enum.ScaleType.Fit
+LogoButton.Active = true
+LogoButton.Draggable = true
+LogoButton.ZIndex = 15
+LogoButton.Visible = not blackScreenEnabled
+LogoButton.Parent = ScreenGui
+
+-- Animation cho logo: lắc lư nhẹ liên tục
+local logoHoverTween = TweenService:Create(LogoButton, TweenInfo.new(1.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1), {Rotation = 5})
+logoHoverTween:Play()
+
 -- ===== NÚT TOGGLE BLACK SCREEN (GÓC DƯỚI PHẢI) =====
 local ToggleBlackBtn = Instance.new("TextButton")
 ToggleBlackBtn.Size = UDim2.new(0, 50, 0, 50)
@@ -248,14 +239,21 @@ ToggleBlackBtn.Text = blackScreenEnabled and '<font color="rgb(0,255,0)">></font
 ToggleBlackBtn.ZIndex = 20
 ToggleBlackBtn.Parent = ScreenGui
 
-ToggleBlackBtn.MouseButton1Click:Connect(function()
+local function toggleBlackScreen()
     blackScreenEnabled = not blackScreenEnabled
     Background.Visible = blackScreenEnabled
     ToggleBlackBtn.Text = blackScreenEnabled and '<font color="rgb(0,255,0)">></font>' or '<font color="rgb(255,0,0)">X</font>'
+    
+    -- Chuyển đổi hiển thị: bật -> hiện CenterFrame, tắt -> hiện Logo
+    CenterFrame.Visible = blackScreenEnabled
+    LogoButton.Visible = not blackScreenEnabled
+    
     notify("Black Screen", blackScreenEnabled and "BẬT (FPS "..FPS_CAP..")" or "TẮT (FPS 60)", 2)
-end)
+end
 
--- ================= CẬP NHẬT DỮ LIỆU & HIỆU ỨNG CẦU VỒNG =================
+ToggleBlackBtn.MouseButton1Click:Connect(toggleBlackScreen)
+
+-- ================= CẬP NHẬT DỮ LIỆU & HIỆU ỨNG =================
 local fps = 0
 local lastTime = tick()
 local frameCount = 0
