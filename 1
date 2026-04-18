@@ -1,9 +1,10 @@
 -- ================= CONFIG (CHỈNH SỬA TRỰC TIẾP TRONG SCRIPT) =================
-local RAM_LIMIT_MB = 2500               -- Giới hạn RAM để auto crash (MB)
-local FPS_CAP = 10                      -- Mức giới hạn FPS khi black screen bật
-local RAINBOW_ENABLED = true            -- Hiệu ứng cầu vồng cho chữ
-local RAINBOW_SPEED = 3.0               -- Tốc độ chuyển màu (giây)
-local AUTO_CRASH_ENABLED = true         -- Bật/tắt auto crash (chỉ sửa ở đây, không tương tác UI)
+local DISPLAY_NAME = "Crawl"             -- Tên hiển thị
+local RAM_LIMIT_MB = 2500                -- Giới hạn RAM (MB)
+local FPS_CAP = 10                       -- FPS khi bật black screen
+local RAINBOW_ENABLED = true             -- Hiệu ứng cầu vồng
+local RAINBOW_SPEED = 3.0                -- Tốc độ đổi màu (giây)
+local AUTO_CRASH_ENABLED = true          -- true = bật auto crash, false = tắt
 
 -- ================= SERVICES =================
 local Players = game:GetService("Players")
@@ -13,14 +14,15 @@ local StarterGui = game:GetService("StarterGui")
 local LocalPlayer = Players.LocalPlayer
 
 -- ================= STATE =================
-local blackScreenEnabled = true          -- Mặc định bật
+local blackScreenEnabled = true
 local autoCrashEnabled = AUTO_CRASH_ENABLED
 
--- ================= UTILS =================
+-- ================= NOTIFICATION =================
 local function notify(title, text, dur)
     pcall(function() StarterGui:SetCore("SendNotification", { Title = title, Text = text, Duration = dur or 3 }) end)
 end
 
+-- ================= HSV TO RGB (RAINBOW) =================
 local function HSVtoRGB(h, s, v)
     h = h % 1
     local r, g, b
@@ -57,7 +59,7 @@ task.spawn(function()
     end
 end)
 
--- ================= FPS CONTROL (chỉ hoạt động khi black screen bật) =================
+-- ================= FPS CONTROL =================
 task.spawn(function()
     while true do
         pcall(function()
@@ -88,9 +90,9 @@ Background.BackgroundTransparency = 0
 Background.Visible = blackScreenEnabled
 Background.Parent = ScreenGui
 
--- Container cho thanh info (căn giữa đỉnh màn hình, có thể cuộn ngang)
+-- Container thanh info (căn giữa đỉnh)
 local InfoContainer = Instance.new("ScrollingFrame")
-InfoContainer.Size = UDim2.new(0.98, 0, 0, 40)
+InfoContainer.Size = UDim2.new(0.95, 0, 0, 44)   -- cao hơn chút cho chữ to
 InfoContainer.Position = UDim2.new(0.5, 0, 0, 5)
 InfoContainer.AnchorPoint = Vector2.new(0.5, 0)
 InfoContainer.BackgroundTransparency = 1
@@ -101,7 +103,7 @@ InfoContainer.CanvasSize = UDim2.new(0, 0, 0, 0)
 InfoContainer.AutomaticCanvasSize = Enum.AutomaticSize.X
 InfoContainer.Parent = ScreenGui
 
--- Thanh info (nền trong suốt, không viền)
+-- Thanh info (nền trong suốt)
 local InfoBar = Instance.new("Frame")
 InfoBar.Size = UDim2.new(0, 0, 1, 0)
 InfoBar.BackgroundTransparency = 1
@@ -111,19 +113,19 @@ InfoBar.Parent = InfoContainer
 
 local layout = Instance.new("UIListLayout", InfoBar)
 layout.FillDirection = Enum.FillDirection.Horizontal
-layout.HorizontalAlignment = Enum.HorizontalAlignment.Left
+layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 layout.VerticalAlignment = Enum.VerticalAlignment.Center
 layout.Padding = UDim.new(0, 6)
 layout.Wraps = false
 
--- Helper tạo phần tử
+-- Hàm tạo Label
 local function createLabel(text)
     local lbl = Instance.new("TextLabel")
     lbl.BackgroundTransparency = 1
     lbl.Text = text
     lbl.TextColor3 = Color3.new(1,1,1)
     lbl.FontFace = Font.fromName("FredokaOne", Enum.FontWeight.Bold)
-    lbl.TextSize = 18
+    lbl.TextSize = 22
     lbl.Size = UDim2.new(0, 0, 1, -4)
     lbl.AutomaticSize = Enum.AutomaticSize.X
     lbl.TextXAlignment = Enum.TextXAlignment.Left
@@ -131,18 +133,15 @@ local function createLabel(text)
     return lbl
 end
 
--- Tạo label rỗng để thêm khoảng cách bên trái
-local leftPadding = createLabel("        ")  -- 8 khoảng trắng
-
--- Xây dựng các thành phần theo thứ tự
-local usernameLabel = createLabel(LocalPlayer.Name)
+-- Xây dựng đúng format: username | Auto Crash: ✅/❌ (xxx/2500 MB) | FPS: xx | Ping: xx
+local leftPad = createLabel("        ")  -- khoảng trống bên trái
+local nameLabel = createLabel(DISPLAY_NAME)
 local sep1 = createLabel("|")
 local crashPrefix = createLabel("Auto Crash:")
--- Icon trạng thái (chỉ hiển thị, không click)
 local crashIcon = createLabel("")
 crashIcon.RichText = true
 local paren1 = createLabel("(")
-local ramDisplay = createLabel("")
+local ramLabel = createLabel("")
 local paren2 = createLabel("MB)")
 local sep2 = createLabel("|")
 local fpsPrefix = createLabel("FPS:")
@@ -151,13 +150,8 @@ local sep3 = createLabel("|")
 local pingPrefix = createLabel("Ping:")
 local pingValue = createLabel("0")
 
--- Lưu để cập nhật
-local uiElements = {
-    crashIcon = crashIcon,
-    ramDisplay = ramDisplay,
-    fpsValue = fpsValue,
-    pingValue = pingValue,
-    labels = { leftPadding, usernameLabel, sep1, crashPrefix, paren1, paren2, sep2, fpsPrefix, sep3, pingPrefix }
+local uiLabels = {
+    leftPad, nameLabel, sep1, crashPrefix, paren1, paren2, sep2, fpsPrefix, sep3, pingPrefix
 }
 
 -- Nút toggle Black Screen (góc dưới phải)
@@ -174,10 +168,10 @@ ToggleBlackBtn.MouseButton1Click:Connect(function()
     blackScreenEnabled = not blackScreenEnabled
     Background.Visible = blackScreenEnabled
     ToggleBlackBtn.Text = blackScreenEnabled and '<font color="rgb(0,255,0)">></font>' or '<font color="rgb(255,0,0)">X</font>'
-    notify("Black Screen", blackScreenEnabled and "BẬT (FPS lock "..FPS_CAP..")" or "TẮT (FPS 60)", 2)
+    notify("Black Screen", blackScreenEnabled and "BẬT (FPS "..FPS_CAP..")" or "TẮT (FPS 60)", 2)
 end)
 
--- ================= CẬP NHẬT DỮ LIỆU LIÊN TỤC =================
+-- ================= CẬP NHẬT DỮ LIỆU =================
 local fps = 0
 local lastTime = tick()
 local frameCount = 0
@@ -194,41 +188,40 @@ RunService.RenderStepped:Connect(function(dt)
     local mem = math.floor(Stats:GetTotalMemoryUsageMb())
     local ping = math.floor(LocalPlayer:GetNetworkPing() * 1000)
 
-    -- Cập nhật icon Auto Crash (chỉ hiển thị, không tương tác)
+    -- Cập nhật nội dung
     crashIcon.Text = autoCrashEnabled and '<font color="#00FF00">✅</font>' or '<font color="#FF0000">❌</font>'
-    ramDisplay.Text = string.format("%d/%d", mem, RAM_LIMIT_MB)
+    ramLabel.Text = string.format("%d/%d", mem, RAM_LIMIT_MB)
     fpsValue.Text = tostring(fps)
     pingValue.Text = tostring(ping)
 
-    -- Responsive font size
+    -- Cỡ chữ thích ứng (lớn hơn)
     local screenWidth = workspace.CurrentCamera.ViewportSize.X
-    local baseSize = math.clamp(math.floor(screenWidth * 0.014), 14, 24)
-    for _, elem in pairs(uiElements.labels) do elem.TextSize = baseSize end
+    local baseSize = math.clamp(math.floor(screenWidth * 0.016), 18, 28)
+    for _, lbl in ipairs(uiLabels) do lbl.TextSize = baseSize end
     crashIcon.TextSize = baseSize
-    ramDisplay.TextSize = baseSize
+    ramLabel.TextSize = baseSize
     fpsValue.TextSize = baseSize
     pingValue.TextSize = baseSize
 
-    -- Rainbow effect (nếu bật)
+    -- Hiệu ứng cầu vồng
     if RAINBOW_ENABLED then
         local hue = (tick() % RAINBOW_SPEED) / RAINBOW_SPEED
         local color = HSVtoRGB(hue, 0.9, 1.0)
-        for _, elem in pairs(uiElements.labels) do elem.TextColor3 = color end
-        ramDisplay.TextColor3 = color
+        for _, lbl in ipairs(uiLabels) do lbl.TextColor3 = color end
+        ramLabel.TextColor3 = color
         fpsValue.TextColor3 = color
         pingValue.TextColor3 = color
-        -- crashIcon giữ màu riêng
     else
         local white = Color3.new(1,1,1)
-        for _, elem in pairs(uiElements.labels) do elem.TextColor3 = white end
-        ramDisplay.TextColor3 = white
+        for _, lbl in ipairs(uiLabels) do lbl.TextColor3 = white end
+        ramLabel.TextColor3 = white
         fpsValue.TextColor3 = white
         pingValue.TextColor3 = white
     end
 end)
 
--- ================= LOAD EXTERNAL SCRIPT (tuỳ chọn) =================
-local function safeLoad(url, name)
+-- ================= LOAD EXTERNAL (tuỳ chọn) =================
+local function safeLoad(url)
     pcall(function()
         local success, result = pcall(game.HttpGet, game, url)
         if success then
@@ -238,9 +231,6 @@ local function safeLoad(url, name)
     end)
 end
 
-safeLoad(
-    "https://raw.githubusercontent.com/canhongson/CanHongSon/refs/heads/main/loader.lua",
-    "CanHongSon Loader"
-)
+safeLoad("https://raw.githubusercontent.com/canhongson/CanHongSon/refs/heads/main/loader.lua")
 
-notify("BlackScreen+", "Đã sẵn sàng. Chỉnh cài đặt trong script.", 5)
+notify("BlackScreen+", "✅ Format đầy đủ. Giữa đỉnh, chữ to.", 5)
