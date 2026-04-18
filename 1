@@ -96,8 +96,8 @@ Background.Parent = ScreenGui
 
 -- ===== THANH TRẠNG THÁI (LOGIC CỦA MÀY) =====
 local InfoContainer = Instance.new("ScrollingFrame")
-InfoContainer.Size = UDim2.new(1, -20, 0, 44)
-InfoContainer.Position = UDim2.new(0.5, 0, 0, 8)
+InfoContainer.Size = UDim2.new(1, -20, 0, 48)
+InfoContainer.Position = UDim2.new(0.5, 0, 0, 4)
 InfoContainer.AnchorPoint = Vector2.new(0.5, 0)
 InfoContainer.BackgroundTransparency = 1
 InfoContainer.BorderSizePixel = 0
@@ -210,19 +210,55 @@ discordLabel.MouseButton1Click:Connect(function()
     end)
 end)
 
--- ===== LOGO KÉO THẢ (HIỆN KHI TẮT BLACK SCREEN) =====
+local centerTextObjects = {titleLabel, accountLabel, discordLabel}
+local function tweenCenterContent(alpha, duration)
+    for _, obj in ipairs(centerTextObjects) do
+        TweenService:Create(
+            obj,
+            TweenInfo.new(duration, Enum.EasingStyle.Sine, Enum.EasingDirection.Out),
+            {TextTransparency = alpha}
+        ):Play()
+    end
+    TweenService:Create(
+        stroke,
+        TweenInfo.new(duration, Enum.EasingStyle.Sine, Enum.EasingDirection.Out),
+        {Transparency = alpha}
+    ):Play()
+end
+
+local ParticleLayer = Instance.new("Frame")
+ParticleLayer.Size = UDim2.new(1, 0, 1, 0)
+ParticleLayer.BackgroundTransparency = 1
+ParticleLayer.BorderSizePixel = 0
+ParticleLayer.ZIndex = 14
+ParticleLayer.Parent = ScreenGui
+
+-- ===== LOGO KÉO THẢ (NÚT GÓC TRÒN MỞ GUI) =====
 local LogoButton = Instance.new("ImageButton")
-LogoButton.Size = UDim2.new(0, 80, 0, 80)
-LogoButton.Position = UDim2.new(0.5, -40, 0.5, -40)
-LogoButton.BackgroundTransparency = 1
+LogoButton.Size = UDim2.new(0, 74, 0, 74)
+LogoButton.AnchorPoint = Vector2.new(0.5, 0.5)
+LogoButton.Position = UDim2.new(0.92, 0, 0.82, 0)
+LogoButton.BackgroundTransparency = 0.25
+LogoButton.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 LogoButton.Image = LOGO_IMAGE_ID
 LogoButton.ImageColor3 = Color3.new(1,1,1)
 LogoButton.ScaleType = Enum.ScaleType.Fit
 LogoButton.Active = true
 LogoButton.Draggable = true
-LogoButton.ZIndex = 15
+LogoButton.ZIndex = 16
 LogoButton.Visible = not blackScreenEnabled
 LogoButton.Parent = ScreenGui
+
+local logoCorner = Instance.new("UICorner")
+logoCorner.CornerRadius = UDim.new(1, 0)
+logoCorner.Parent = LogoButton
+
+local logoStroke = Instance.new("UIStroke")
+logoStroke.Thickness = 2
+logoStroke.Color = Color3.fromRGB(0, 255, 120)
+logoStroke.Transparency = 0.15
+logoStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+logoStroke.Parent = LogoButton
 
 -- Kéo thả thủ công để hoạt động ổn định hơn Draggable ở nhiều executor/client
 local dragging = false
@@ -264,6 +300,50 @@ local logoHoverTween = TweenService:Create(
 )
 logoHoverTween:Play()
 
+local function createParticle(position, color)
+    local p = Instance.new("Frame")
+    p.Size = UDim2.new(0, math.random(5, 10), 0, math.random(5, 10))
+    p.AnchorPoint = Vector2.new(0.5, 0.5)
+    p.Position = position
+    p.BackgroundColor3 = color
+    p.BorderSizePixel = 0
+    p.ZIndex = 15
+    p.Parent = ParticleLayer
+
+    local pc = Instance.new("UICorner")
+    pc.CornerRadius = UDim.new(1, 0)
+    pc.Parent = p
+    return p
+end
+
+local function burstTransition(fromPos, toPos, pieceCount, duration)
+    for _ = 1, pieceCount do
+        local particle = createParticle(fromPos, Color3.fromRGB(math.random(120, 255), 255, math.random(120, 255)))
+        local midOffset = Vector2.new(math.random(-140, 140), math.random(-110, 110))
+        local endOffset = Vector2.new(math.random(-24, 24), math.random(-24, 24))
+        local midPos = UDim2.new(toPos.X.Scale, toPos.X.Offset + midOffset.X, toPos.Y.Scale, toPos.Y.Offset + midOffset.Y)
+        local endPos = UDim2.new(toPos.X.Scale, toPos.X.Offset + endOffset.X, toPos.Y.Scale, toPos.Y.Offset + endOffset.Y)
+
+        local tweenA = TweenService:Create(
+            particle,
+            TweenInfo.new(duration * 0.45, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+            {Position = midPos, BackgroundTransparency = 0.25}
+        )
+        local tweenB = TweenService:Create(
+            particle,
+            TweenInfo.new(duration * 0.55, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
+            {Position = endPos, BackgroundTransparency = 1, Size = UDim2.new(0, 2, 0, 2)}
+        )
+        tweenA:Play()
+        tweenA.Completed:Connect(function()
+            tweenB:Play()
+        end)
+        tweenB.Completed:Connect(function()
+            particle:Destroy()
+        end)
+    end
+end
+
 -- ===== NÚT TOGGLE BLACK SCREEN (GÓC DƯỚI PHẢI) =====
 local ToggleBlackBtn = Instance.new("TextButton")
 ToggleBlackBtn.Size = UDim2.new(0, 50, 0, 50)
@@ -275,19 +355,54 @@ ToggleBlackBtn.Text = blackScreenEnabled and '<font color="rgb(0,255,0)">></font
 ToggleBlackBtn.ZIndex = 20
 ToggleBlackBtn.Parent = ScreenGui
 
+local transitionBusy = false
 local function toggleBlackScreen()
+    if transitionBusy then return end
+    transitionBusy = true
+
     blackScreenEnabled = not blackScreenEnabled
     Background.Visible = blackScreenEnabled
     ToggleBlackBtn.Text = blackScreenEnabled and '<font color="rgb(0,255,0)">></font>' or '<font color="rgb(255,0,0)">X</font>'
-    
-    -- Chuyển đổi hiển thị: bật -> hiện CenterFrame, tắt -> hiện Logo
-    CenterFrame.Visible = blackScreenEnabled
-    LogoButton.Visible = not blackScreenEnabled
-    
+
+    local centerPos = UDim2.new(0.5, 0, 0.5, 0)
+    local logoPos = LogoButton.Position
+
+    if blackScreenEnabled then
+        -- Logo tan mảnh, gom thành nội dung giữa màn hình
+        CenterFrame.Visible = true
+        for _, obj in ipairs(centerTextObjects) do
+            obj.TextTransparency = 1
+        end
+        stroke.Transparency = 1
+        burstTransition(logoPos, centerPos, 38, 0.55)
+        tweenCenterContent(0, 0.45)
+        TweenService:Create(LogoButton, TweenInfo.new(0.2), {ImageTransparency = 1, BackgroundTransparency = 1}):Play()
+        task.wait(0.5)
+        LogoButton.Visible = false
+        LogoButton.ImageTransparency = 0
+        LogoButton.BackgroundTransparency = 0.25
+    else
+        -- Nội dung giữa màn hình tan mảnh, gom lại thành logo
+        LogoButton.Visible = true
+        LogoButton.ImageTransparency = 1
+        LogoButton.BackgroundTransparency = 1
+        burstTransition(centerPos, logoPos, 38, 0.55)
+        TweenService:Create(LogoButton, TweenInfo.new(0.45, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {ImageTransparency = 0, BackgroundTransparency = 0.25}):Play()
+        tweenCenterContent(1, 0.2)
+        task.wait(0.25)
+        CenterFrame.Visible = false
+        for _, obj in ipairs(centerTextObjects) do
+            obj.TextTransparency = 0
+        end
+        stroke.Transparency = 0
+    end
+
     notify("Black Screen", blackScreenEnabled and "BẬT (FPS "..FPS_CAP..")" or "TẮT (FPS 60)", 2)
+    transitionBusy = false
 end
 
 ToggleBlackBtn.MouseButton1Click:Connect(toggleBlackScreen)
+LogoButton.MouseButton1Click:Connect(toggleBlackScreen)
 
 -- ================= CẬP NHẬT DỮ LIỆU & HIỆU ỨNG =================
 local fps = 0
