@@ -3,6 +3,7 @@ local RAM_LIMIT_MB = 2500               -- Giới hạn RAM để auto crash (MB
 local FPS_CAP = 10                      -- Mức giới hạn FPS khi black screen bật
 local RAINBOW_ENABLED = true            -- Hiệu ứng cầu vồng cho chữ
 local RAINBOW_SPEED = 3.0               -- Tốc độ chuyển màu (giây)
+local AUTO_CRASH_ENABLED = true         -- Bật/tắt auto crash (chỉ sửa ở đây, không tương tác UI)
 
 -- ================= SERVICES =================
 local Players = game:GetService("Players")
@@ -13,7 +14,7 @@ local LocalPlayer = Players.LocalPlayer
 
 -- ================= STATE =================
 local blackScreenEnabled = true          -- Mặc định bật
-local autoCrashEnabled = true            -- Mặc định bật
+local autoCrashEnabled = AUTO_CRASH_ENABLED
 
 -- ================= UTILS =================
 local function notify(title, text, dur)
@@ -63,7 +64,7 @@ task.spawn(function()
             if blackScreenEnabled then
                 setfpscap(FPS_CAP)
             else
-                setfpscap(60)   -- trả về mặc định khi tắt black screen
+                setfpscap(60)
             end
         end)
         task.wait(1)
@@ -78,7 +79,7 @@ ScreenGui.IgnoreGuiInset = true
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.Parent = game.CoreGui
 
--- Nền đen (có thể bật/tắt)
+-- Nền đen toàn màn hình
 local Background = Instance.new("Frame")
 Background.Size = UDim2.new(1, 0, 1, 0)
 Background.BackgroundColor3 = Color3.new(0, 0, 0)
@@ -87,7 +88,7 @@ Background.BackgroundTransparency = 0
 Background.Visible = blackScreenEnabled
 Background.Parent = ScreenGui
 
--- Thanh info (căn giữa đỉnh màn hình, có thể cuộn ngang nếu dài)
+-- Container cho thanh info (căn giữa đỉnh màn hình, có thể cuộn ngang)
 local InfoContainer = Instance.new("ScrollingFrame")
 InfoContainer.Size = UDim2.new(0.98, 0, 0, 40)
 InfoContainer.Position = UDim2.new(0.5, 0, 0, 5)
@@ -100,14 +101,13 @@ InfoContainer.CanvasSize = UDim2.new(0, 0, 0, 0)
 InfoContainer.AutomaticCanvasSize = Enum.AutomaticSize.X
 InfoContainer.Parent = ScreenGui
 
+-- Thanh info (nền trong suốt, không viền)
 local InfoBar = Instance.new("Frame")
 InfoBar.Size = UDim2.new(0, 0, 1, 0)
-InfoBar.BackgroundColor3 = Color3.new(0.1, 0.1, 0.1)
-InfoBar.BackgroundTransparency = 0.3
+InfoBar.BackgroundTransparency = 1
 InfoBar.BorderSizePixel = 0
 InfoBar.AutomaticSize = Enum.AutomaticSize.X
 InfoBar.Parent = InfoContainer
-Instance.new("UICorner", InfoBar).CornerRadius = UDim.new(0, 8)
 
 local layout = Instance.new("UIListLayout", InfoBar)
 layout.FillDirection = Enum.FillDirection.Horizontal
@@ -131,31 +131,18 @@ local function createLabel(text)
     return lbl
 end
 
-local function createIconButton()
-    local btn = Instance.new("TextButton")
-    btn.BackgroundColor3 = Color3.new(0.15, 0.15, 0.15)
-    btn.BorderSizePixel = 0
-    btn.Text = ""
-    btn.RichText = true
-    btn.TextColor3 = Color3.new(1,1,1)
-    btn.FontFace = Font.fromName("FredokaOne", Enum.FontWeight.Bold)
-    btn.TextSize = 18
-    btn.Size = UDim2.new(0, 30, 0.8, 0)
-    btn.AutomaticSize = Enum.AutomaticSize.X
-    btn.TextXAlignment = Enum.TextXAlignment.Center
-    btn.Parent = InfoBar
-    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 8)
-    return btn
-end
+-- Tạo label rỗng để thêm khoảng cách bên trái
+local leftPadding = createLabel("        ")  -- 8 khoảng trắng
 
--- Xây dựng các thành phần theo đúng thứ tự
+-- Xây dựng các thành phần theo thứ tự
 local usernameLabel = createLabel(LocalPlayer.Name)
 local sep1 = createLabel("|")
 local crashPrefix = createLabel("Auto Crash:")
-local crashToggle = createIconButton()
-crashToggle.Text = autoCrashEnabled and '<font color="#00FF00">✅</font>' or '<font color="#FF0000">❌</font>'
+-- Icon trạng thái (chỉ hiển thị, không click)
+local crashIcon = createLabel("")
+crashIcon.RichText = true
 local paren1 = createLabel("(")
-local ramDisplay = createLabel("")   -- sẽ cập nhật sau
+local ramDisplay = createLabel("")
 local paren2 = createLabel("MB)")
 local sep2 = createLabel("|")
 local fpsPrefix = createLabel("FPS:")
@@ -166,11 +153,11 @@ local pingValue = createLabel("0")
 
 -- Lưu để cập nhật
 local uiElements = {
-    crashToggle = crashToggle,
+    crashIcon = crashIcon,
     ramDisplay = ramDisplay,
     fpsValue = fpsValue,
     pingValue = pingValue,
-    labels = { usernameLabel, sep1, crashPrefix, paren1, paren2, sep2, fpsPrefix, sep3, pingPrefix }
+    labels = { leftPadding, usernameLabel, sep1, crashPrefix, paren1, paren2, sep2, fpsPrefix, sep3, pingPrefix }
 }
 
 -- Nút toggle Black Screen (góc dưới phải)
@@ -190,13 +177,6 @@ ToggleBlackBtn.MouseButton1Click:Connect(function()
     notify("Black Screen", blackScreenEnabled and "BẬT (FPS lock "..FPS_CAP..")" or "TẮT (FPS 60)", 2)
 end)
 
--- ================= TƯƠNG TÁC: TOGGLE AUTO CRASH =================
-crashToggle.MouseButton1Click:Connect(function()
-    autoCrashEnabled = not autoCrashEnabled
-    crashToggle.Text = autoCrashEnabled and '<font color="#00FF00">✅</font>' or '<font color="#FF0000">❌</font>'
-    notify("Auto Crash", autoCrashEnabled and "BẬT" or "TẮT", 2)
-end)
-
 -- ================= CẬP NHẬT DỮ LIỆU LIÊN TỤC =================
 local fps = 0
 local lastTime = tick()
@@ -214,6 +194,8 @@ RunService.RenderStepped:Connect(function(dt)
     local mem = math.floor(Stats:GetTotalMemoryUsageMb())
     local ping = math.floor(LocalPlayer:GetNetworkPing() * 1000)
 
+    -- Cập nhật icon Auto Crash (chỉ hiển thị, không tương tác)
+    crashIcon.Text = autoCrashEnabled and '<font color="#00FF00">✅</font>' or '<font color="#FF0000">❌</font>'
     ramDisplay.Text = string.format("%d/%d", mem, RAM_LIMIT_MB)
     fpsValue.Text = tostring(fps)
     pingValue.Text = tostring(ping)
@@ -222,7 +204,7 @@ RunService.RenderStepped:Connect(function(dt)
     local screenWidth = workspace.CurrentCamera.ViewportSize.X
     local baseSize = math.clamp(math.floor(screenWidth * 0.014), 14, 24)
     for _, elem in pairs(uiElements.labels) do elem.TextSize = baseSize end
-    crashToggle.TextSize = baseSize
+    crashIcon.TextSize = baseSize
     ramDisplay.TextSize = baseSize
     fpsValue.TextSize = baseSize
     pingValue.TextSize = baseSize
@@ -235,7 +217,7 @@ RunService.RenderStepped:Connect(function(dt)
         ramDisplay.TextColor3 = color
         fpsValue.TextColor3 = color
         pingValue.TextColor3 = color
-        -- crashToggle giữ màu riêng
+        -- crashIcon giữ màu riêng
     else
         local white = Color3.new(1,1,1)
         for _, elem in pairs(uiElements.labels) do elem.TextColor3 = white end
@@ -261,4 +243,4 @@ safeLoad(
     "CanHongSon Loader"
 )
 
-notify("BlackScreen+", "Bấm >/< để tắt nền đen. Click ✅/❌ để bật/tắt Auto Crash.", 5)
+notify("BlackScreen+", "Đã sẵn sàng. Chỉnh cài đặt trong script.", 5)
