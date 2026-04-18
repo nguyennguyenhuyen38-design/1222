@@ -5,7 +5,7 @@ local RAINBOW_ENABLED = true
 local RAINBOW_SPEED = 3.0
 local AUTO_CRASH_ENABLED = true
 local DISCORD_INVITE = ".gg/YXdEJruW"
-local LOGO_IMAGE_ID = "rbxassetid://1234567890"  -- THAY BẰNG ID ẢNH CỦA BẠN
+local LOGO_IMAGE_ID = "rbxassetid://127114283690733"
 
 -- ================= SERVICES =================
 local Players = game:GetService("Players")
@@ -224,8 +224,44 @@ LogoButton.ZIndex = 15
 LogoButton.Visible = not blackScreenEnabled
 LogoButton.Parent = ScreenGui
 
+-- Kéo thả thủ công để hoạt động ổn định hơn Draggable ở nhiều executor/client
+local dragging = false
+local dragStart
+local startPos
+
+LogoButton.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = LogoButton.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+
+local UserInputService = game:GetService("UserInputService")
+UserInputService.InputChanged:Connect(function(input)
+    if not dragging then return end
+    if input.UserInputType ~= Enum.UserInputType.MouseMovement and input.UserInputType ~= Enum.UserInputType.Touch then
+        return
+    end
+    local delta = input.Position - dragStart
+    LogoButton.Position = UDim2.new(
+        startPos.X.Scale, startPos.X.Offset + delta.X,
+        startPos.Y.Scale, startPos.Y.Offset + delta.Y
+    )
+end)
+
 -- Animation cho logo: lắc lư nhẹ liên tục
-local logoHoverTween = TweenService:Create(LogoButton, TweenInfo.new(1.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1), {Rotation = 5})
+LogoButton.Rotation = -5
+local logoHoverTween = TweenService:Create(
+    LogoButton,
+    TweenInfo.new(1.2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
+    {Rotation = 5}
+)
 logoHoverTween:Play()
 
 -- ===== NÚT TOGGLE BLACK SCREEN (GÓC DƯỚI PHẢI) =====
