@@ -11,7 +11,6 @@ local LOGO_IMAGE_ID = "rbxassetid://127114283690733"
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local Stats = game:GetService("Stats")
-local StarterGui = game:GetService("StarterGui")
 local TweenService = game:GetService("TweenService")
 local ContentProvider = game:GetService("ContentProvider")
 local LocalPlayer = Players.LocalPlayer
@@ -21,15 +20,19 @@ local blackScreenEnabled = true
 local autoCrashEnabled = AUTO_CRASH_ENABLED
 
 -- ================= NOTIFICATION =================
+local notifyImpl = nil
+local pendingNotifications = {}
 local function notify(title, text, dur, icon)
-    pcall(function()
-        StarterGui:SetCore("SendNotification", {
-            Title = title,
-            Text = text,
-            Duration = dur or 3,
-            Icon = icon
-        })
-    end)
+    if notifyImpl then
+        notifyImpl(title, text, dur, icon)
+        return
+    end
+    table.insert(pendingNotifications, {
+        title = title,
+        text = text,
+        dur = dur,
+        icon = icon
+    })
 end
 
 -- ================= AUTO CRASH MONITOR =================
@@ -91,6 +94,129 @@ ScreenGui.IgnoreGuiInset = true
 ScreenGui.DisplayOrder = 999999
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Global
 ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+
+local NotificationRoot = Instance.new("Frame")
+NotificationRoot.Name = "NotifyRoot"
+NotificationRoot.Size = UDim2.new(0, 360, 1, -24)
+NotificationRoot.Position = UDim2.new(1, -16, 0, 12)
+NotificationRoot.AnchorPoint = Vector2.new(1, 0)
+NotificationRoot.BackgroundTransparency = 1
+NotificationRoot.BorderSizePixel = 0
+NotificationRoot.ZIndex = 200
+NotificationRoot.Parent = ScreenGui
+
+local notificationLayout = Instance.new("UIListLayout")
+notificationLayout.FillDirection = Enum.FillDirection.Vertical
+notificationLayout.HorizontalAlignment = Enum.HorizontalAlignment.Right
+notificationLayout.VerticalAlignment = Enum.VerticalAlignment.Top
+notificationLayout.Padding = UDim.new(0, 10)
+notificationLayout.Parent = NotificationRoot
+
+local notifyPrimary = Color3.fromHex("00ff66")
+local notifyDark = Color3.fromRGB(8, 20, 12)
+
+notifyImpl = function(title, text, dur, icon)
+    local card = Instance.new("Frame")
+    card.Size = UDim2.new(1, 0, 0, 74)
+    card.BackgroundColor3 = notifyDark
+    card.BackgroundTransparency = 0.08
+    card.BorderSizePixel = 0
+    card.ClipsDescendants = true
+    card.ZIndex = 201
+    card.Parent = NotificationRoot
+
+    local cardCorner = Instance.new("UICorner")
+    cardCorner.CornerRadius = UDim.new(0, 14)
+    cardCorner.Parent = card
+
+    local cardStroke = Instance.new("UIStroke")
+    cardStroke.Color = notifyPrimary
+    cardStroke.Thickness = 1.8
+    cardStroke.Transparency = 0.2
+    cardStroke.Parent = card
+
+    local glow = Instance.new("Frame")
+    glow.Size = UDim2.new(0, 4, 1, 0)
+    glow.BackgroundColor3 = notifyPrimary
+    glow.BorderSizePixel = 0
+    glow.ZIndex = 202
+    glow.Parent = card
+
+    local iconImage = Instance.new("ImageLabel")
+    iconImage.Size = UDim2.new(0, 42, 0, 42)
+    iconImage.Position = UDim2.new(0, 12, 0.5, 0)
+    iconImage.AnchorPoint = Vector2.new(0, 0.5)
+    iconImage.BackgroundTransparency = 1
+    iconImage.Image = icon or LOGO_IMAGE_ID
+    iconImage.ScaleType = Enum.ScaleType.Fit
+    iconImage.ZIndex = 203
+    iconImage.Parent = card
+
+    local iconMask = Instance.new("UICorner")
+    iconMask.CornerRadius = UDim.new(1, 0)
+    iconMask.Parent = iconImage
+
+    local titleLabelN = Instance.new("TextLabel")
+    titleLabelN.Size = UDim2.new(1, -66, 0, 28)
+    titleLabelN.Position = UDim2.new(0, 60, 0, 8)
+    titleLabelN.BackgroundTransparency = 1
+    titleLabelN.Text = title or "Thông báo"
+    titleLabelN.TextColor3 = notifyPrimary
+    titleLabelN.FontFace = Font.fromName("FredokaOne", Enum.FontWeight.Bold)
+    titleLabelN.TextSize = 20
+    titleLabelN.TextXAlignment = Enum.TextXAlignment.Left
+    titleLabelN.ZIndex = 203
+    titleLabelN.Parent = card
+
+    local textLabelN = Instance.new("TextLabel")
+    textLabelN.Size = UDim2.new(1, -66, 0, 26)
+    textLabelN.Position = UDim2.new(0, 60, 0, 37)
+    textLabelN.BackgroundTransparency = 1
+    textLabelN.Text = text or ""
+    textLabelN.TextColor3 = Color3.new(1, 1, 1)
+    textLabelN.FontFace = Font.fromName("FredokaOne", Enum.FontWeight.Regular)
+    textLabelN.TextSize = 16
+    textLabelN.TextWrapped = true
+    textLabelN.TextXAlignment = Enum.TextXAlignment.Left
+    textLabelN.TextYAlignment = Enum.TextYAlignment.Center
+    textLabelN.ZIndex = 203
+    textLabelN.Parent = card
+
+    local hold = dur or 2.5
+    card.Position = UDim2.new(1, 40, 0, 0)
+    card.BackgroundTransparency = 1
+    iconImage.ImageTransparency = 1
+    titleLabelN.TextTransparency = 1
+    textLabelN.TextTransparency = 1
+    cardStroke.Transparency = 1
+    glow.BackgroundTransparency = 1
+
+    TweenService:Create(card, TweenInfo.new(0.28, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Position = UDim2.new(0, 0, 0, 0), BackgroundTransparency = 0.08}):Play()
+    TweenService:Create(iconImage, TweenInfo.new(0.2), {ImageTransparency = 0}):Play()
+    TweenService:Create(titleLabelN, TweenInfo.new(0.2), {TextTransparency = 0}):Play()
+    TweenService:Create(textLabelN, TweenInfo.new(0.2), {TextTransparency = 0}):Play()
+    TweenService:Create(cardStroke, TweenInfo.new(0.2), {Transparency = 0.2}):Play()
+    TweenService:Create(glow, TweenInfo.new(0.2), {BackgroundTransparency = 0}):Play()
+
+    task.delay(hold, function()
+        if not card.Parent then return end
+        TweenService:Create(card, TweenInfo.new(0.24, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Position = UDim2.new(1, 36, 0, 0), BackgroundTransparency = 1}):Play()
+        TweenService:Create(iconImage, TweenInfo.new(0.2), {ImageTransparency = 1}):Play()
+        TweenService:Create(titleLabelN, TweenInfo.new(0.2), {TextTransparency = 1}):Play()
+        TweenService:Create(textLabelN, TweenInfo.new(0.2), {TextTransparency = 1}):Play()
+        TweenService:Create(cardStroke, TweenInfo.new(0.2), {Transparency = 1}):Play()
+        TweenService:Create(glow, TweenInfo.new(0.2), {BackgroundTransparency = 1}):Play()
+        task.wait(0.26)
+        card:Destroy()
+    end)
+end
+
+if #pendingNotifications > 0 then
+    for _, n in ipairs(pendingNotifications) do
+        notifyImpl(n.title, n.text, n.dur, n.icon)
+    end
+    pendingNotifications = {}
+end
 
 -- Nền đen toàn màn hình
 local Background = Instance.new("Frame")
