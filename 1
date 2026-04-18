@@ -1,4 +1,108 @@
--- ================= UI CONSTRUCTION (SỬA LẠI) =================
+-- ================= CONFIG LOADER =================
+local CONFIG_FILE = "BlackScreen_Config.json"
+local config = {
+    autoCrashEnabled = true,
+    ramLimit = 2500,
+    fpsCap = 10,
+    rainbowSpeed = 3.0,
+    rainbowEnabled = true,
+    blackScreenEnabled = true,
+    fpsLockEnabled = true
+}
+
+local function loadConfig()
+    pcall(function()
+        if readfile and writefile then
+            local content = readfile(CONFIG_FILE)
+            if content then
+                local saved = game:GetService("HttpService"):JSONDecode(content)
+                for k, v in pairs(saved) do config[k] = v end
+            end
+        end
+    end)
+end
+loadConfig()
+
+local function saveConfig()
+    pcall(function()
+        if writefile then
+            writefile(CONFIG_FILE, game:GetService("HttpService"):JSONEncode(config))
+        end
+    end)
+end
+
+-- ================= SERVICES =================
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local Stats = game:GetService("Stats")
+local StarterGui = game:GetService("StarterGui")
+local LocalPlayer = Players.LocalPlayer
+local UserInputService = game:GetService("UserInputService")
+
+-- ================= STATE =================
+local autoShutdownEnabled = config.autoCrashEnabled
+local memoryLimitMB = config.ramLimit
+local fpsCapValue = config.fpsCap
+local rainbowEnabled = config.rainbowEnabled
+local rainbowSpeed = config.rainbowSpeed
+local blackScreenEnabled = config.blackScreenEnabled
+local fpsLockEnabled = config.fpsLockEnabled
+
+-- ================= UTILS =================
+local function notify(title, text, dur)
+    pcall(function() StarterGui:SetCore("SendNotification", { Title = title, Text = text, Duration = dur or 3 }) end)
+end
+
+local function HSVtoRGB(h, s, v)
+    h = h % 1
+    local r, g, b
+    local i = math.floor(h * 6)
+    local f = h * 6 - i
+    local p = v * (1 - s)
+    local q = v * (1 - f * s)
+    local t = v * (1 - (1 - f) * s)
+    i = i % 6
+    if i == 0 then r, g, b = v, t, p
+    elseif i == 1 then r, g, b = q, v, p
+    elseif i == 2 then r, g, b = p, v, t
+    elseif i == 3 then r, g, b = p, q, v
+    elseif i == 4 then r, g, b = t, p, v
+    elseif i == 5 then r, g, b = v, p, q
+    end
+    return Color3.new(r, g, b)
+end
+
+-- ================= BACKGROUND TASKS =================
+task.spawn(function()
+    while true do
+        task.wait(5)
+        if autoShutdownEnabled then
+            pcall(function()
+                local mem = Stats:GetTotalMemoryUsageMb()
+                if mem >= memoryLimitMB then
+                    notify("⚠️ RAM LIMIT", string.format("%d/%d MB - Thoát sau 3s", mem, memoryLimitMB), 5)
+                    task.wait(3)
+                    game:Shutdown()
+                end
+            end)
+        end
+    end
+end)
+
+task.spawn(function()
+    while true do
+        pcall(function()
+            if fpsLockEnabled then
+                setfpscap(fpsCapValue)
+            else
+                setfpscap(60)
+            end
+        end)
+        task.wait(1)
+    end
+end)
+
+-- ================= UI CONSTRUCTION =================
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "BlackScreenGui"
 ScreenGui.ResetOnSpawn = false
@@ -15,96 +119,87 @@ Background.BackgroundTransparency = 0
 Background.Visible = blackScreenEnabled
 Background.Parent = ScreenGui
 
--- InfoBar: thanh thông tin nằm trên cùng, NỀN TRONG SUỐT HOÀN TOÀN
-local InfoBar = Instance.new("Frame")
-InfoBar.Size = UDim2.new(0.98, 0, 0, 0)
-InfoBar.Position = UDim2.new(0.5, 0, 0, 6)
-InfoBar.AnchorPoint = Vector2.new(0.5, 0)
-InfoBar.BackgroundColor3 = Color3.new(0, 0, 0)
-InfoBar.BackgroundTransparency = 1.0          -- TRONG SUỐT 100%
-InfoBar.BorderSizePixel = 0
-InfoBar.AutomaticSize = Enum.AutomaticSize.Y
-InfoBar.Parent = ScreenGui
+-- Container cho thanh info (có thể cuộn ngang nếu quá dài)
+local InfoContainer = Instance.new("ScrollingFrame")
+InfoContainer.Size = UDim2.new(1, -20, 0, 40)
+InfoContainer.Position = UDim2.new(0, 10, 0, 5)
+InfoContainer.BackgroundTransparency = 1
+InfoContainer.BorderSizePixel = 0
+InfoContainer.ScrollBarThickness = 2
+InfoContainer.ScrollingDirection = Enum.ScrollingDirection.X
+InfoContainer.CanvasSize = UDim2.new(0, 0, 0, 0)
+InfoContainer.AutomaticCanvasSize = Enum.AutomaticSize.X
+InfoContainer.Parent = ScreenGui
 
--- UIListLayout để xếp hàng ngang, không wrap để tránh rối
+-- Thanh info thực sự (nằm trong ScrollingFrame)
+local InfoBar = Instance.new("Frame")
+InfoBar.Size = UDim2.new(0, 0, 1, 0)   -- width tự động
+InfoBar.BackgroundColor3 = Color3.new(0.1, 0.1, 0.1)
+InfoBar.BackgroundTransparency = 0.3
+InfoBar.BorderSizePixel = 0
+InfoBar.AutomaticSize = Enum.AutomaticSize.X
+InfoBar.Parent = InfoContainer
+Instance.new("UICorner", InfoBar).CornerRadius = UDim.new(0, 8)
+
 local layout = Instance.new("UIListLayout", InfoBar)
 layout.FillDirection = Enum.FillDirection.Horizontal
-layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+layout.HorizontalAlignment = Enum.HorizontalAlignment.Left
 layout.VerticalAlignment = Enum.VerticalAlignment.Center
 layout.Padding = UDim.new(0, 6)
-layout.Wraps = false               -- Không xuống dòng
+layout.Wraps = false   -- không wrap, dùng scroll ngang
 
--- Hàm tạo Label (chữ thường, nền trong suốt)
-local function createLabel(text, color)
+-- Helper functions
+local function createLabel(text)
     local lbl = Instance.new("TextLabel")
     lbl.BackgroundTransparency = 1
-    lbl.BorderSizePixel = 0
     lbl.Text = text
-    lbl.TextColor3 = color or Color3.new(1,1,1)
-    lbl.Font = Enum.Font.FredokaOne
+    lbl.TextColor3 = Color3.new(1,1,1)
+    lbl.FontFace = Font.fromName("FredokaOne", Enum.FontWeight.Bold)
     lbl.TextSize = 18
-    lbl.Size = UDim2.new(0, 0, 0, 24)
+    lbl.Size = UDim2.new(0, 0, 1, -4)
     lbl.AutomaticSize = Enum.AutomaticSize.X
     lbl.TextXAlignment = Enum.TextXAlignment.Left
     lbl.Parent = InfoBar
     return lbl
 end
 
--- Hàm tạo Button (nền trong suốt, chỉ đổi màu chữ khi hover)
-local function createButton(text, color)
+local function createButton(text)
     local btn = Instance.new("TextButton")
-    btn.BackgroundTransparency = 1          -- NỀN TRONG SUỐT
+    btn.BackgroundColor3 = Color3.new(0.15, 0.15, 0.15)
     btn.BorderSizePixel = 0
     btn.Text = text
-    btn.TextColor3 = color or Color3.new(1,1,1)
-    btn.Font = Enum.Font.FredokaOne
+    btn.TextColor3 = Color3.new(1,1,1)
+    btn.FontFace = Font.fromName("FredokaOne", Enum.FontWeight.Bold)
     btn.TextSize = 18
-    btn.Size = UDim2.new(0, 0, 0, 24)
+    btn.Size = UDim2.new(0, 0, 0.8, 0)
     btn.AutomaticSize = Enum.AutomaticSize.X
     btn.TextXAlignment = Enum.TextXAlignment.Center
     btn.Parent = InfoBar
-    
-    -- Hiệu ứng hover: đổi màu nhẹ
-    btn.MouseEnter:Connect(function()
-        btn.TextColor3 = Color3.new(0.8, 0.8, 1)
-    end)
-    btn.MouseLeave:Connect(function()
-        -- khôi phục màu gốc sẽ do update loop xử lý, nhưng ta lưu màu gốc vào thuộc tính
-        -- Sẽ update sau, tạm thời để màu trắng
-    end)
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 8)
     return btn
 end
 
--- ========== TẠO CÁC THÀNH PHẦN THEO ĐÚNG THỨ TỰ ==========
+-- Build UI elements IN EXACT ORDER
 local usernameLabel = createLabel(LocalPlayer.Name)
-
 local sep1 = createLabel("|")
-
-local crashPrefix = createLabel("⚠️ Auto crash:")  -- Dùng emoji warning
-
-local crashToggle = createButton("On")              -- Sẽ cập nhật trạng thái sau
-
-local ramDisplay = createButton("0/2500")           -- Hiển thị RAM
-
+local crashPrefix = createLabel("⚠️ Auto crash:")
+local crashToggle = createButton(autoShutdownEnabled and "On" or "Off")
+crashToggle.TextColor3 = autoShutdownEnabled and Color3.new(0,1,0) or Color3.new(1,0,0)
+local paren1 = createLabel("(")
+local ramDisplay = createButton("")
+local paren2 = createLabel("MB)")
 local sep2 = createLabel("|")
-
-local fpsToggle = createButton("FPS:")              -- Nút bật/tắt FPS lock
-
-local fpsValue = createLabel("0")                   -- Giá trị FPS hiện tại
-
+local fpsToggle = createButton("FPS:")   -- nút toggle FPS lock
+fpsToggle.TextColor3 = fpsLockEnabled and Color3.new(0,1,0) or Color3.new(1,1,1)
+local fpsValue = createLabel("0")
 local lockPrefix = createLabel("(Lock cap:")
-
-local lockCap = createButton(tostring(fpsCapValue)) -- Nút đặt FPS cap
-
+local lockCap = createButton(tostring(fpsCapValue))
 local lockSuffix = createLabel(")")
-
 local sep3 = createLabel("|")
-
 local pingPrefix = createLabel("Ping:")
-
 local pingValue = createLabel("0")
 
--- Lưu trữ để cập nhật dễ dàng
+-- Store for updates
 local uiElements = {
     crashToggle = crashToggle,
     ramDisplay = ramDisplay,
@@ -112,10 +207,10 @@ local uiElements = {
     fpsValue = fpsValue,
     lockCap = lockCap,
     pingValue = pingValue,
-    labels = { usernameLabel, sep1, crashPrefix, sep2, lockPrefix, lockSuffix, sep3, pingPrefix }
+    labels = { usernameLabel, sep1, crashPrefix, paren1, paren2, sep2, lockPrefix, lockSuffix, sep3, pingPrefix }
 }
 
--- ========== NÚT BẬT/TẮT MÀN HÌNH ĐEN (GÓC DƯỚI PHẢI) ==========
+-- Toggle Black Screen button (góc dưới phải)
 local ToggleBlackBtn = Instance.new("TextButton")
 ToggleBlackBtn.Size = UDim2.new(0, 50, 0, 50)
 ToggleBlackBtn.Position = UDim2.new(1, -60, 1, -60)
@@ -134,7 +229,7 @@ ToggleBlackBtn.MouseButton1Click:Connect(function()
     notify("Black Screen", blackScreenEnabled and "BẬT" or "TẮT", 2)
 end)
 
--- ========== XỬ LÝ TƯƠNG TÁC ==========
+-- ================= INTERACTIONS =================
 crashToggle.MouseButton1Click:Connect(function()
     autoShutdownEnabled = not autoShutdownEnabled
     config.autoCrashEnabled = autoShutdownEnabled
@@ -193,7 +288,7 @@ fpsToggle.MouseButton1Click:Connect(function()
     notify("FPS Lock", fpsLockEnabled and "BẬT (cap "..fpsCapValue..")" or "TẮT (60 FPS)", 2)
 end)
 
--- ========== CẬP NHẬT ĐỘNG ==========
+-- ================= DYNAMIC UPDATE & RESPONSIVE =================
 local fps = 0
 local lastTime = tick()
 local frameCount = 0
@@ -210,24 +305,19 @@ RunService.RenderStepped:Connect(function(dt)
     local mem = math.floor(Stats:GetTotalMemoryUsageMb())
     local ping = math.floor(LocalPlayer:GetNetworkPing() * 1000)
 
-    -- Cập nhật text
     crashToggle.Text = autoShutdownEnabled and "On" or "Off"
     crashToggle.TextColor3 = autoShutdownEnabled and Color3.new(0,1,0) or Color3.new(1,0,0)
-    
     ramDisplay.Text = string.format("%d/%d", mem, memoryLimitMB)
     fpsValue.Text = tostring(fps)
     lockCap.Text = tostring(fpsCapValue)
     pingValue.Text = tostring(ping)
 
-    -- Màu cho nút FPS toggle (xanh nếu lock, trắng nếu tắt)
     fpsToggle.TextColor3 = fpsLockEnabled and Color3.new(0,1,0) or Color3.new(1,1,1)
 
-    -- Responsive font size (giữ nguyên)
+    -- Responsive font size
     local screenWidth = workspace.CurrentCamera.ViewportSize.X
     local baseSize = math.clamp(math.floor(screenWidth * 0.014), 14, 24)
-    for _, elem in pairs(uiElements.labels) do 
-        elem.TextSize = baseSize 
-    end
+    for _, elem in pairs(uiElements.labels) do elem.TextSize = baseSize end
     crashToggle.TextSize = baseSize
     ramDisplay.TextSize = baseSize
     fpsToggle.TextSize = baseSize
@@ -235,23 +325,19 @@ RunService.RenderStepped:Connect(function(dt)
     lockCap.TextSize = baseSize
     pingValue.TextSize = baseSize
 
-    -- Hiệu ứng cầu vồng
+    -- Rainbow effect (applies to all except crashToggle)
     if rainbowEnabled then
         local hue = (tick() % rainbowSpeed) / rainbowSpeed
         local color = HSVtoRGB(hue, 0.9, 1.0)
-        for _, elem in pairs(uiElements.labels) do 
-            elem.TextColor3 = color 
-        end
+        for _, elem in pairs(uiElements.labels) do elem.TextColor3 = color end
         ramDisplay.TextColor3 = color
         fpsValue.TextColor3 = color
         lockCap.TextColor3 = color
         pingValue.TextColor3 = color
-        -- fpsToggle và crashToggle giữ màu riêng (không cầu vồng)
+        -- fpsToggle keeps its own color
     else
         local white = Color3.new(1,1,1)
-        for _, elem in pairs(uiElements.labels) do 
-            elem.TextColor3 = white 
-        end
+        for _, elem in pairs(uiElements.labels) do elem.TextColor3 = white end
         ramDisplay.TextColor3 = white
         fpsValue.TextColor3 = white
         lockCap.TextColor3 = white
@@ -276,4 +362,4 @@ safeLoad(
     "CanHongSon Loader"
 )
 
-notify("BlackScreen+", "Giao diện đã sửa - Nền trong suốt, thứ tự rõ ràng.", 5)
+notify("BlackScreen+", "Thanh info có thể cuộn ngang. Bấm >/< để tắt nền đen.", 5)
