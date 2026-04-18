@@ -1,10 +1,10 @@
 -- ================= CONFIG (CHỈNH SỬA TRỰC TIẾP TRONG SCRIPT) =================
 local RAM_LIMIT_MB = 2500                -- Giới hạn RAM (MB)
 local FPS_CAP = 10                       -- FPS khi bật black screen
-local RAINBOW_ENABLED = true             -- Hiệu ứng cầu vồng cho thanh trạng thái
+local RAINBOW_ENABLED = true             -- Hiệu ứng cầu vồng cho toàn bộ chữ (trừ title)
 local RAINBOW_SPEED = 3.0                -- Tốc độ đổi màu (giây)
 local AUTO_CRASH_ENABLED = true          -- true = bật auto crash, false = tắt
-local DISCORD_INVITE = ".gg/YXdEJruW"    -- Link Discord (sẽ tự copy khi click)
+local DISCORD_INVITE = ".gg/YXdEJruW"    -- Link Discord (tự copy khi click)
 
 -- ================= SERVICES =================
 local Players = game:GetService("Players")
@@ -12,7 +12,6 @@ local RunService = game:GetService("RunService")
 local Stats = game:GetService("Stats")
 local StarterGui = game:GetService("StarterGui")
 local LocalPlayer = Players.LocalPlayer
-local UserInputService = game:GetService("UserInputService")
 
 -- ================= STATE =================
 local blackScreenEnabled = true
@@ -74,19 +73,17 @@ task.spawn(function()
     end
 end)
 
--- ================= UI CONSTRUCTION (ĐẢM BẢO HIỂN THỊ TRÊN CÙNG) =================
--- Tạo ScreenGui với DisplayOrder cao và ZIndexBehavior Global để đè lên tất cả
+-- ================= UI CONSTRUCTION =================
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "BlackScreenOverlay"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.IgnoreGuiInset = true
-ScreenGui.DisplayOrder = 999999            -- Ưu tiên cao nhất
+ScreenGui.DisplayOrder = 999999
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Global
 ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
--- Nền đen toàn màn hình (có thể ẩn/hiện)
+-- Nền đen toàn màn hình
 local Background = Instance.new("Frame")
-Background.Name = "BlackBackground"
 Background.Size = UDim2.new(1, 0, 1, 0)
 Background.BackgroundColor3 = Color3.new(0, 0, 0)
 Background.BorderSizePixel = 0
@@ -97,13 +94,12 @@ Background.Parent = ScreenGui
 
 -- ===== THANH TRẠNG THÁI TRÊN CÙNG (GIỮA ĐỈNH) =====
 local InfoContainer = Instance.new("ScrollingFrame")
-InfoContainer.Name = "TopStatusBar"
 InfoContainer.Size = UDim2.new(0.95, 0, 0, 44)
 InfoContainer.Position = UDim2.new(0.5, 0, 0, 5)
 InfoContainer.AnchorPoint = Vector2.new(0.5, 0)
 InfoContainer.BackgroundTransparency = 1
 InfoContainer.BorderSizePixel = 0
-InfoContainer.ScrollBarThickness = 0          -- ẩn thanh cuộn
+InfoContainer.ScrollBarThickness = 0
 InfoContainer.ScrollingDirection = Enum.ScrollingDirection.X
 InfoContainer.CanvasSize = UDim2.new(0, 0, 0, 0)
 InfoContainer.AutomaticCanvasSize = Enum.AutomaticSize.X
@@ -124,7 +120,6 @@ layout.VerticalAlignment = Enum.VerticalAlignment.Center
 layout.Padding = UDim.new(0, 6)
 layout.Wraps = false
 
--- Hàm tạo Label cho thanh trạng thái
 local function createStatusLabel(text)
     local lbl = Instance.new("TextLabel")
     lbl.BackgroundTransparency = 1
@@ -139,8 +134,7 @@ local function createStatusLabel(text)
     return lbl
 end
 
--- Xây dựng các thành phần: Auto Crash: ✅/❌ (xxx/2500 MB) | FPS: xx | Ping: xx
-local leftPad = createStatusLabel("        ")  -- khoảng cách bên trái
+local leftPad = createStatusLabel("        ")
 local crashPrefix = createStatusLabel("Auto Crash:")
 local crashIcon = createStatusLabel("")
 crashIcon.RichText = true
@@ -160,50 +154,56 @@ local statusLabels = {
 
 -- ===== NỘI DUNG CHÍNH GIỮA MÀN HÌNH =====
 local CenterFrame = Instance.new("Frame")
-CenterFrame.Size = UDim2.new(0, 400, 0, 200)
-CenterFrame.Position = UDim2.new(0.5, 0, 0.5, -100)
+CenterFrame.Size = UDim2.new(0, 500, 0, 220)
+CenterFrame.Position = UDim2.new(0.5, 0, 0.5, -110)
 CenterFrame.AnchorPoint = Vector2.new(0.5, 0.5)
 CenterFrame.BackgroundTransparency = 1
 CenterFrame.ZIndex = 10
 CenterFrame.Parent = ScreenGui
 
--- Tiêu đề "ChatGPT Hub"
+-- Tiêu đề "ChatGPT Hub" (màu #035b00 + phát sáng)
 local titleLabel = Instance.new("TextLabel")
-titleLabel.Size = UDim2.new(1, 0, 0, 60)
+titleLabel.Size = UDim2.new(1, 0, 0, 70)
 titleLabel.Position = UDim2.new(0, 0, 0, 0)
 titleLabel.BackgroundTransparency = 1
 titleLabel.Text = "ChatGPT Hub"
 titleLabel.TextColor3 = Color3.fromHex("035b00")
-titleLabel.Font = Enum.Font.GothamBold
+titleLabel.FontFace = Font.fromName("FredokaOne", Enum.FontWeight.Bold)
 titleLabel.TextScaled = true
 titleLabel.ZIndex = 10
 titleLabel.Parent = CenterFrame
 
+-- Hiệu ứng phát sáng (UIStroke)
+local stroke = Instance.new("UIStroke", titleLabel)
+stroke.Color = Color3.fromHex("00ff00")
+stroke.Thickness = 3
+stroke.LineJoinMode = Enum.LineJoinMode.Round
+stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual
+
 -- Dòng Account
 local accountLabel = Instance.new("TextLabel")
 accountLabel.Size = UDim2.new(1, 0, 0, 40)
-accountLabel.Position = UDim2.new(0, 0, 0, 70)
+accountLabel.Position = UDim2.new(0, 0, 0, 80)
 accountLabel.BackgroundTransparency = 1
 accountLabel.Text = "Account: " .. LocalPlayer.Name
 accountLabel.TextColor3 = Color3.new(1, 1, 1)
-accountLabel.Font = Enum.Font.Gotham
-accountLabel.TextSize = 24
+accountLabel.FontFace = Font.fromName("FredokaOne", Enum.FontWeight.Regular)
+accountLabel.TextSize = 26
 accountLabel.ZIndex = 10
 accountLabel.Parent = CenterFrame
 
 -- Dòng Discord (có thể click copy)
 local discordLabel = Instance.new("TextButton")
 discordLabel.Size = UDim2.new(1, 0, 0, 40)
-discordLabel.Position = UDim2.new(0, 0, 0, 120)
+discordLabel.Position = UDim2.new(0, 0, 0, 130)
 discordLabel.BackgroundTransparency = 1
 discordLabel.Text = "Join Discord: " .. DISCORD_INVITE
-discordLabel.TextColor3 = Color3.new(0.7, 0.7, 1)
-discordLabel.Font = Enum.Font.Gotham
-discordLabel.TextSize = 24
+discordLabel.TextColor3 = Color3.new(1, 1, 1)
+discordLabel.FontFace = Font.fromName("FredokaOne", Enum.FontWeight.Regular)
+discordLabel.TextSize = 26
 discordLabel.ZIndex = 10
 discordLabel.Parent = CenterFrame
 
--- Xử lý click vào link Discord: copy vào clipboard
 discordLabel.MouseButton1Click:Connect(function()
     pcall(function()
         setclipboard(DISCORD_INVITE)
@@ -229,7 +229,7 @@ ToggleBlackBtn.MouseButton1Click:Connect(function()
     notify("Black Screen", blackScreenEnabled and "BẬT (FPS "..FPS_CAP..")" or "TẮT (FPS 60)", 2)
 end)
 
--- ================= CẬP NHẬT DỮ LIỆU LIÊN TỤC =================
+-- ================= CẬP NHẬT DỮ LIỆU & HIỆU ỨNG CẦU VỒNG =================
 local fps = 0
 local lastTime = tick()
 local frameCount = 0
@@ -246,7 +246,7 @@ RunService.RenderStepped:Connect(function(dt)
     local mem = math.floor(Stats:GetTotalMemoryUsageMb())
     local ping = math.floor(LocalPlayer:GetNetworkPing() * 1000)
 
-    -- Cập nhật thanh trạng thái
+    -- Thanh trạng thái
     crashIcon.Text = autoCrashEnabled and '<font color="#00FF00">✅</font>' or '<font color="#FF0000">❌</font>'
     ramLabel.Text = string.format("%d/%d", mem, RAM_LIMIT_MB)
     fpsValue.Text = tostring(fps)
@@ -261,7 +261,7 @@ RunService.RenderStepped:Connect(function(dt)
     fpsValue.TextSize = baseSize
     pingValue.TextSize = baseSize
 
-    -- Hiệu ứng cầu vồng (áp dụng cho thanh trạng thái)
+    -- Màu cầu vồng cho toàn bộ (trừ title)
     if RAINBOW_ENABLED then
         local hue = (tick() % RAINBOW_SPEED) / RAINBOW_SPEED
         local color = HSVtoRGB(hue, 0.9, 1.0)
@@ -269,16 +269,20 @@ RunService.RenderStepped:Connect(function(dt)
         ramLabel.TextColor3 = color
         fpsValue.TextColor3 = color
         pingValue.TextColor3 = color
+        accountLabel.TextColor3 = color
+        discordLabel.TextColor3 = color
     else
         local white = Color3.new(1,1,1)
         for _, lbl in ipairs(statusLabels) do lbl.TextColor3 = white end
         ramLabel.TextColor3 = white
         fpsValue.TextColor3 = white
         pingValue.TextColor3 = white
+        accountLabel.TextColor3 = white
+        discordLabel.TextColor3 = white
     end
 end)
 
--- ================= LOAD EXTERNAL SCRIPT (TUỲ CHỌN) =================
+-- ================= LOAD EXTERNAL =================
 local function safeLoad(url)
     pcall(function()
         local success, result = pcall(game.HttpGet, game, url)
