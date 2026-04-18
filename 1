@@ -1,10 +1,10 @@
 -- ================= CONFIG (CHỈNH SỬA TRỰC TIẾP TRONG SCRIPT) =================
-local DISPLAY_NAME = "Crawl"             -- Tên hiển thị
 local RAM_LIMIT_MB = 2500                -- Giới hạn RAM (MB)
 local FPS_CAP = 10                       -- FPS khi bật black screen
-local RAINBOW_ENABLED = true             -- Hiệu ứng cầu vồng
+local RAINBOW_ENABLED = true             -- Hiệu ứng cầu vồng cho thanh trạng thái
 local RAINBOW_SPEED = 3.0                -- Tốc độ đổi màu (giây)
 local AUTO_CRASH_ENABLED = true          -- true = bật auto crash, false = tắt
+local DISCORD_INVITE = ".gg/YXdEJruW"    -- Link Discord (sẽ tự copy khi click)
 
 -- ================= SERVICES =================
 local Players = game:GetService("Players")
@@ -12,6 +12,7 @@ local RunService = game:GetService("RunService")
 local Stats = game:GetService("Stats")
 local StarterGui = game:GetService("StarterGui")
 local LocalPlayer = Players.LocalPlayer
+local UserInputService = game:GetService("UserInputService")
 
 -- ================= STATE =================
 local blackScreenEnabled = true
@@ -73,69 +74,42 @@ task.spawn(function()
     end
 end)
 
--- ================= UI CONSTRUCTION =================
+-- ================= UI CONSTRUCTION (ĐẢM BẢO HIỂN THỊ TRÊN CÙNG) =================
+-- Tạo ScreenGui với DisplayOrder cao và ZIndexBehavior Global để đè lên tất cả
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "BlackScreenGui"
+ScreenGui.Name = "BlackScreenOverlay"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.IgnoreGuiInset = true
-ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-ScreenGui.Parent = game.CoreGui
+ScreenGui.DisplayOrder = 999999            -- Ưu tiên cao nhất
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Global
+ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
--- Nền đen toàn màn hình
+-- Nền đen toàn màn hình (có thể ẩn/hiện)
 local Background = Instance.new("Frame")
+Background.Name = "BlackBackground"
 Background.Size = UDim2.new(1, 0, 1, 0)
 Background.BackgroundColor3 = Color3.new(0, 0, 0)
 Background.BorderSizePixel = 0
 Background.BackgroundTransparency = 0
 Background.Visible = blackScreenEnabled
+Background.ZIndex = 1
 Background.Parent = ScreenGui
 
--- Container thanh info (căn giữa đỉnh)
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "MyUI"
-ScreenGui.ResetOnSpawn = false
-ScreenGui.IgnoreGuiInset = true -- QUAN TRỌNG: bỏ vùng top bar Roblox
-ScreenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
-
+-- ===== THANH TRẠNG THÁI TRÊN CÙNG (GIỮA ĐỈNH) =====
 local InfoContainer = Instance.new("ScrollingFrame")
-InfoContainer.Name = "InfoContainer"
-
--- Size
-InfoContainer.Size = UDim2.new(0.95, 0, 0, 44)
-
--- Căn giữa ngang + nằm sát top (không bị che)
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "MyUI"
-ScreenGui.ResetOnSpawn = false
-ScreenGui.IgnoreGuiInset = true
-ScreenGui.DisplayOrder = 999999 -- QUAN TRỌNG: luôn nằm trên UI khác
-ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Global
-ScreenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
-
-local InfoContainer = Instance.new("ScrollingFrame")
-InfoContainer.Name = "InfoContainer"
-
--- Size & Position
+InfoContainer.Name = "TopStatusBar"
 InfoContainer.Size = UDim2.new(0.95, 0, 0, 44)
 InfoContainer.Position = UDim2.new(0.5, 0, 0, 5)
 InfoContainer.AnchorPoint = Vector2.new(0.5, 0)
-
--- Style
 InfoContainer.BackgroundTransparency = 1
 InfoContainer.BorderSizePixel = 0
-InfoContainer.ScrollBarThickness = 2
+InfoContainer.ScrollBarThickness = 0          -- ẩn thanh cuộn
 InfoContainer.ScrollingDirection = Enum.ScrollingDirection.X
-
--- Auto canvas
 InfoContainer.CanvasSize = UDim2.new(0, 0, 0, 0)
 InfoContainer.AutomaticCanvasSize = Enum.AutomaticSize.X
-
--- Đẩy layer lên cao
-InfoContainer.ZIndex = 999
-
+InfoContainer.ZIndex = 10
 InfoContainer.Parent = ScreenGui
 
--- Thanh info (nền trong suốt)
 local InfoBar = Instance.new("Frame")
 InfoBar.Size = UDim2.new(0, 0, 1, 0)
 InfoBar.BackgroundTransparency = 1
@@ -150,8 +124,8 @@ layout.VerticalAlignment = Enum.VerticalAlignment.Center
 layout.Padding = UDim.new(0, 6)
 layout.Wraps = false
 
--- Hàm tạo Label
-local function createLabel(text)
+-- Hàm tạo Label cho thanh trạng thái
+local function createStatusLabel(text)
     local lbl = Instance.new("TextLabel")
     lbl.BackgroundTransparency = 1
     lbl.Text = text
@@ -165,28 +139,79 @@ local function createLabel(text)
     return lbl
 end
 
--- Xây dựng đúng format: username | Auto Crash: ✅/❌ (xxx/2500 MB) | FPS: xx | Ping: xx
-local leftPad = createLabel("                          ")  -- khoảng trống bên trái
-local nameLabel = createLabel(DISPLAY_NAME)
-local sep1 = createLabel("|")
-local crashPrefix = createLabel("Auto Crash:")
-local crashIcon = createLabel("")
+-- Xây dựng các thành phần: Auto Crash: ✅/❌ (xxx/2500 MB) | FPS: xx | Ping: xx
+local leftPad = createStatusLabel("        ")  -- khoảng cách bên trái
+local crashPrefix = createStatusLabel("Auto Crash:")
+local crashIcon = createStatusLabel("")
 crashIcon.RichText = true
-local paren1 = createLabel("(")
-local ramLabel = createLabel("")
-local paren2 = createLabel("MB)")
-local sep2 = createLabel("|")
-local fpsPrefix = createLabel("FPS:")
-local fpsValue = createLabel("0")
-local sep3 = createLabel("|")
-local pingPrefix = createLabel("Ping:")
-local pingValue = createLabel("0")
+local paren1 = createStatusLabel("(")
+local ramLabel = createStatusLabel("")
+local paren2 = createStatusLabel("MB)")
+local sep2 = createStatusLabel("|")
+local fpsPrefix = createStatusLabel("FPS:")
+local fpsValue = createStatusLabel("0")
+local sep3 = createStatusLabel("|")
+local pingPrefix = createStatusLabel("Ping:")
+local pingValue = createStatusLabel("0")
 
-local uiLabels = {
-    leftPad, nameLabel, sep1, crashPrefix, paren1, paren2, sep2, fpsPrefix, sep3, pingPrefix
+local statusLabels = {
+    leftPad, crashPrefix, paren1, paren2, sep2, fpsPrefix, sep3, pingPrefix
 }
 
--- Nút toggle Black Screen (góc dưới phải)
+-- ===== NỘI DUNG CHÍNH GIỮA MÀN HÌNH =====
+local CenterFrame = Instance.new("Frame")
+CenterFrame.Size = UDim2.new(0, 400, 0, 200)
+CenterFrame.Position = UDim2.new(0.5, 0, 0.5, -100)
+CenterFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+CenterFrame.BackgroundTransparency = 1
+CenterFrame.ZIndex = 10
+CenterFrame.Parent = ScreenGui
+
+-- Tiêu đề "ChatGPT Hub"
+local titleLabel = Instance.new("TextLabel")
+titleLabel.Size = UDim2.new(1, 0, 0, 60)
+titleLabel.Position = UDim2.new(0, 0, 0, 0)
+titleLabel.BackgroundTransparency = 1
+titleLabel.Text = "ChatGPT Hub"
+titleLabel.TextColor3 = Color3.fromHex("035b00")
+titleLabel.Font = Enum.Font.GothamBold
+titleLabel.TextScaled = true
+titleLabel.ZIndex = 10
+titleLabel.Parent = CenterFrame
+
+-- Dòng Account
+local accountLabel = Instance.new("TextLabel")
+accountLabel.Size = UDim2.new(1, 0, 0, 40)
+accountLabel.Position = UDim2.new(0, 0, 0, 70)
+accountLabel.BackgroundTransparency = 1
+accountLabel.Text = "Account: " .. LocalPlayer.Name
+accountLabel.TextColor3 = Color3.new(1, 1, 1)
+accountLabel.Font = Enum.Font.Gotham
+accountLabel.TextSize = 24
+accountLabel.ZIndex = 10
+accountLabel.Parent = CenterFrame
+
+-- Dòng Discord (có thể click copy)
+local discordLabel = Instance.new("TextButton")
+discordLabel.Size = UDim2.new(1, 0, 0, 40)
+discordLabel.Position = UDim2.new(0, 0, 0, 120)
+discordLabel.BackgroundTransparency = 1
+discordLabel.Text = "Join Discord: " .. DISCORD_INVITE
+discordLabel.TextColor3 = Color3.new(0.7, 0.7, 1)
+discordLabel.Font = Enum.Font.Gotham
+discordLabel.TextSize = 24
+discordLabel.ZIndex = 10
+discordLabel.Parent = CenterFrame
+
+-- Xử lý click vào link Discord: copy vào clipboard
+discordLabel.MouseButton1Click:Connect(function()
+    pcall(function()
+        setclipboard(DISCORD_INVITE)
+        notify("Discord", "Đã copy link: " .. DISCORD_INVITE, 2)
+    end)
+end)
+
+-- ===== NÚT TOGGLE BLACK SCREEN (GÓC DƯỚI PHẢI) =====
 local ToggleBlackBtn = Instance.new("TextButton")
 ToggleBlackBtn.Size = UDim2.new(0, 50, 0, 50)
 ToggleBlackBtn.Position = UDim2.new(1, -60, 1, -60)
@@ -194,6 +219,7 @@ ToggleBlackBtn.BackgroundTransparency = 1
 ToggleBlackBtn.TextScaled = true
 ToggleBlackBtn.RichText = true
 ToggleBlackBtn.Text = blackScreenEnabled and '<font color="rgb(0,255,0)">></font>' or '<font color="rgb(255,0,0)">X</font>'
+ToggleBlackBtn.ZIndex = 20
 ToggleBlackBtn.Parent = ScreenGui
 
 ToggleBlackBtn.MouseButton1Click:Connect(function()
@@ -203,7 +229,7 @@ ToggleBlackBtn.MouseButton1Click:Connect(function()
     notify("Black Screen", blackScreenEnabled and "BẬT (FPS "..FPS_CAP..")" or "TẮT (FPS 60)", 2)
 end)
 
--- ================= CẬP NHẬT DỮ LIỆU =================
+-- ================= CẬP NHẬT DỮ LIỆU LIÊN TỤC =================
 local fps = 0
 local lastTime = tick()
 local frameCount = 0
@@ -220,39 +246,39 @@ RunService.RenderStepped:Connect(function(dt)
     local mem = math.floor(Stats:GetTotalMemoryUsageMb())
     local ping = math.floor(LocalPlayer:GetNetworkPing() * 1000)
 
-    -- Cập nhật nội dung
+    -- Cập nhật thanh trạng thái
     crashIcon.Text = autoCrashEnabled and '<font color="#00FF00">✅</font>' or '<font color="#FF0000">❌</font>'
     ramLabel.Text = string.format("%d/%d", mem, RAM_LIMIT_MB)
     fpsValue.Text = tostring(fps)
     pingValue.Text = tostring(ping)
 
-    -- Cỡ chữ thích ứng (lớn hơn)
+    -- Responsive font size
     local screenWidth = workspace.CurrentCamera.ViewportSize.X
     local baseSize = math.clamp(math.floor(screenWidth * 0.016), 18, 28)
-    for _, lbl in ipairs(uiLabels) do lbl.TextSize = baseSize end
+    for _, lbl in ipairs(statusLabels) do lbl.TextSize = baseSize end
     crashIcon.TextSize = baseSize
     ramLabel.TextSize = baseSize
     fpsValue.TextSize = baseSize
     pingValue.TextSize = baseSize
 
-    -- Hiệu ứng cầu vồng
+    -- Hiệu ứng cầu vồng (áp dụng cho thanh trạng thái)
     if RAINBOW_ENABLED then
         local hue = (tick() % RAINBOW_SPEED) / RAINBOW_SPEED
         local color = HSVtoRGB(hue, 0.9, 1.0)
-        for _, lbl in ipairs(uiLabels) do lbl.TextColor3 = color end
+        for _, lbl in ipairs(statusLabels) do lbl.TextColor3 = color end
         ramLabel.TextColor3 = color
         fpsValue.TextColor3 = color
         pingValue.TextColor3 = color
     else
         local white = Color3.new(1,1,1)
-        for _, lbl in ipairs(uiLabels) do lbl.TextColor3 = white end
+        for _, lbl in ipairs(statusLabels) do lbl.TextColor3 = white end
         ramLabel.TextColor3 = white
         fpsValue.TextColor3 = white
         pingValue.TextColor3 = white
     end
 end)
 
--- ================= LOAD EXTERNAL (tuỳ chọn) =================
+-- ================= LOAD EXTERNAL SCRIPT (TUỲ CHỌN) =================
 local function safeLoad(url)
     pcall(function()
         local success, result = pcall(game.HttpGet, game, url)
@@ -265,4 +291,4 @@ end
 
 safeLoad("https://raw.githubusercontent.com/canhongson/CanHongSon/refs/heads/main/loader.lua")
 
-notify("BlackScreen+", "✅ Format đầy đủ. Giữa đỉnh, chữ to.", 5)
+notify("ChatGPT Hub", "Black Screen: " .. (blackScreenEnabled and "BẬT" or "TẮT") .. " | FPS Lock: " .. FPS_CAP, 5)
