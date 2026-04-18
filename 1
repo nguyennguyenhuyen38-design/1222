@@ -1,9 +1,10 @@
 -- ================= CONFIG (CHỈNH SỬA TRỰC TIẾP TRONG SCRIPT) =================
-local RAM_LIMIT_MB = 2500               -- Giới hạn RAM (MB)
-local FPS_CAP = 10                      -- FPS khi bật black screen
-local RAINBOW_ENABLED = true            -- Hiệu ứng cầu vồng
-local RAINBOW_SPEED = 3.0               -- Tốc độ đổi màu (giây)
-local AUTO_CRASH_ENABLED = true         -- true = bật auto crash, false = tắt
+local DISPLAY_NAME = "Crawl"             -- Tên hiển thị trên thanh info
+local RAM_LIMIT_MB = 2500                -- Giới hạn RAM (MB)
+local FPS_CAP = 10                       -- FPS khi bật black screen
+local RAINBOW_ENABLED = true             -- Hiệu ứng cầu vồng
+local RAINBOW_SPEED = 3.0                -- Tốc độ đổi màu (giây)
+local AUTO_CRASH_ENABLED = true          -- true = bật auto crash, false = tắt
 
 -- ================= SERVICES =================
 local Players = game:GetService("Players")
@@ -89,20 +90,19 @@ Background.BackgroundTransparency = 0
 Background.Visible = blackScreenEnabled
 Background.Parent = ScreenGui
 
--- Container thanh info (căn giữa đỉnh)
+-- Thanh info nhỏ gọn nằm góc trên bên PHẢI (vị trí khoanh đỏ trong ảnh)
 local InfoContainer = Instance.new("ScrollingFrame")
-InfoContainer.Size = UDim2.new(0.98, 0, 0, 40)
-InfoContainer.Position = UDim2.new(0.5, 0, 0, 5)
-InfoContainer.AnchorPoint = Vector2.new(0.5, 0)
+InfoContainer.Size = UDim2.new(0, 300, 0, 36)   -- chiều rộng cố định đủ chứa text
+InfoContainer.Position = UDim2.new(1, -10, 0, 5)
+InfoContainer.AnchorPoint = Vector2.new(1, 0)
 InfoContainer.BackgroundTransparency = 1
 InfoContainer.BorderSizePixel = 0
-InfoContainer.ScrollBarThickness = 2
+InfoContainer.ScrollBarThickness = 0           -- ẩn thanh cuộn
 InfoContainer.ScrollingDirection = Enum.ScrollingDirection.X
 InfoContainer.CanvasSize = UDim2.new(0, 0, 0, 0)
 InfoContainer.AutomaticCanvasSize = Enum.AutomaticSize.X
 InfoContainer.Parent = ScreenGui
 
--- Thanh info (nền trong suốt)
 local InfoBar = Instance.new("Frame")
 InfoBar.Size = UDim2.new(0, 0, 1, 0)
 InfoBar.BackgroundTransparency = 1
@@ -112,46 +112,35 @@ InfoBar.Parent = InfoContainer
 
 local layout = Instance.new("UIListLayout", InfoBar)
 layout.FillDirection = Enum.FillDirection.Horizontal
-layout.HorizontalAlignment = Enum.HorizontalAlignment.Left
+layout.HorizontalAlignment = Enum.HorizontalAlignment.Right   -- canh phải
 layout.VerticalAlignment = Enum.VerticalAlignment.Center
-layout.Padding = UDim.new(0, 6)
+layout.Padding = UDim.new(0, 4)
 layout.Wraps = false
 
--- Hàm tạo Label
+-- Hàm tạo Label với font lớn hơn một chút
 local function createLabel(text)
     local lbl = Instance.new("TextLabel")
     lbl.BackgroundTransparency = 1
     lbl.Text = text
     lbl.TextColor3 = Color3.new(1,1,1)
     lbl.FontFace = Font.fromName("FredokaOne", Enum.FontWeight.Bold)
-    lbl.TextSize = 18
-    lbl.Size = UDim2.new(0, 0, 1, -4)
+    lbl.TextSize = 20   -- tăng nhẹ
+    lbl.Size = UDim2.new(0, 0, 1, -2)
     lbl.AutomaticSize = Enum.AutomaticSize.X
     lbl.TextXAlignment = Enum.TextXAlignment.Left
     lbl.Parent = InfoBar
     return lbl
 end
 
--- Tạo các phần tử theo đúng thứ tự
-local leftPad = createLabel("        ")  -- khoảng cách bên trái
-local usernameLabel = createLabel(LocalPlayer.Name)
+-- Xây dựng các thành phần đơn giản
+local nameLabel = createLabel(DISPLAY_NAME)
+local ramLabel = createLabel("")
 local sep1 = createLabel("|")
-local crashPrefix = createLabel("Auto Crash:")
-local crashIcon = createLabel("")
-crashIcon.RichText = true
-local paren1 = createLabel("(")
-local ramDisplay = createLabel("")
-local paren2 = createLabel("MB)")
+local fpsLabel = createLabel("FPS: 0")
 local sep2 = createLabel("|")
-local fpsPrefix = createLabel("FPS:")
-local fpsValue = createLabel("0")
-local sep3 = createLabel("|")
-local pingPrefix = createLabel("Ping:")
-local pingValue = createLabel("0")
+local pingLabel = createLabel("Ping: 0")
 
-local uiLabels = {
-    leftPad, usernameLabel, sep1, crashPrefix, paren1, paren2, sep2, fpsPrefix, sep3, pingPrefix
-}
+local uiLabels = { nameLabel, ramLabel, sep1, fpsLabel, sep2, pingLabel }
 
 -- Nút toggle Black Screen (góc dưới phải)
 local ToggleBlackBtn = Instance.new("TextButton")
@@ -187,35 +176,24 @@ RunService.RenderStepped:Connect(function(dt)
     local mem = math.floor(Stats:GetTotalMemoryUsageMb())
     local ping = math.floor(LocalPlayer:GetNetworkPing() * 1000)
 
-    -- Cập nhật icon và số liệu
-    crashIcon.Text = autoCrashEnabled and '<font color="#00FF00">✅</font>' or '<font color="#FF0000">❌</font>'
-    ramDisplay.Text = string.format("%d/%d", mem, RAM_LIMIT_MB)
-    fpsValue.Text = tostring(fps)
-    pingValue.Text = tostring(ping)
+    -- Cập nhật text
+    ramLabel.Text = string.format("%d/%d MB", mem, RAM_LIMIT_MB)
+    fpsLabel.Text = "FPS: " .. tostring(fps)
+    pingLabel.Text = "Ping: " .. tostring(ping)
 
-    -- Font size thích ứng
+    -- Font size thích ứng (lớn hơn chút)
     local screenWidth = workspace.CurrentCamera.ViewportSize.X
-    local baseSize = math.clamp(math.floor(screenWidth * 0.014), 14, 24)
+    local baseSize = math.clamp(math.floor(screenWidth * 0.016), 16, 26)
     for _, lbl in ipairs(uiLabels) do lbl.TextSize = baseSize end
-    crashIcon.TextSize = baseSize
-    ramDisplay.TextSize = baseSize
-    fpsValue.TextSize = baseSize
-    pingValue.TextSize = baseSize
 
-    -- Hiệu ứng cầu vồng (giữ màu riêng cho crashIcon)
+    -- Hiệu ứng cầu vồng
     if RAINBOW_ENABLED then
         local hue = (tick() % RAINBOW_SPEED) / RAINBOW_SPEED
         local color = HSVtoRGB(hue, 0.9, 1.0)
         for _, lbl in ipairs(uiLabels) do lbl.TextColor3 = color end
-        ramDisplay.TextColor3 = color
-        fpsValue.TextColor3 = color
-        pingValue.TextColor3 = color
     else
         local white = Color3.new(1,1,1)
         for _, lbl in ipairs(uiLabels) do lbl.TextColor3 = white end
-        ramDisplay.TextColor3 = white
-        fpsValue.TextColor3 = white
-        pingValue.TextColor3 = white
     end
 end)
 
@@ -232,4 +210,4 @@ end
 
 safeLoad("https://raw.githubusercontent.com/canhongson/CanHongSon/refs/heads/main/loader.lua")
 
-notify("BlackScreen+", "✅ Đã sẵn sàng. Chỉnh cài đặt trong script.", 5)
+notify("BlackScreen+", "✅ Đã sẵn sàng. Góc trên phải, chữ to hơn.", 5)
