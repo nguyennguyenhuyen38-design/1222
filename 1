@@ -5,7 +5,8 @@ local config = {
     ramLimit = 2500,
     fpsCap = 10,
     rainbowSpeed = 3.0,
-    rainbowEnabled = true
+    rainbowEnabled = true,
+    blackScreenEnabled = true
 }
 
 local function loadConfig()
@@ -44,6 +45,7 @@ local memoryLimitMB = config.ramLimit
 local fpsCapValue = config.fpsCap
 local rainbowEnabled = config.rainbowEnabled
 local rainbowSpeed = config.rainbowSpeed
+local blackScreenEnabled = config.blackScreenEnabled
 
 -- ================= UTILS =================
 local function notify(title, text, dur)
@@ -107,43 +109,47 @@ ScreenGui.IgnoreGuiInset = true
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.Parent = game.CoreGui
 
--- Full black background
+-- Black background (có thể ẩn/hiện)
 local Background = Instance.new("Frame")
 Background.Size = UDim2.new(1, 0, 1, 0)
 Background.BackgroundColor3 = Color3.new(0, 0, 0)
 Background.BorderSizePixel = 0
 Background.BackgroundTransparency = 0
+Background.Visible = blackScreenEnabled
 Background.Parent = ScreenGui
 
--- Top bar container (responsive)
+-- Top bar (container chính)
 local TopBar = Instance.new("Frame")
-TopBar.Size = UDim2.new(0.98, 0, 0, 36)          -- height fixed, width relative
+TopBar.Size = UDim2.new(0.98, 0, 0, 0)   -- chiều cao tự động
 TopBar.Position = UDim2.new(0.5, 0, 0, 6)
 TopBar.AnchorPoint = Vector2.new(0.5, 0)
 TopBar.BackgroundColor3 = Color3.new(0.05, 0.05, 0.05)
-TopBar.BackgroundTransparency = 0.4
+TopBar.BackgroundTransparency = 0.3
 TopBar.BorderSizePixel = 0
+TopBar.AutomaticSize = Enum.AutomaticSize.Y   -- tự mở rộng khi xuống dòng
+TopBar.Visible = blackScreenEnabled
 TopBar.Parent = Background
 Instance.new("UICorner", TopBar).CornerRadius = UDim.new(0, 8)
 
--- Layout with wrap (if needed)
+-- Layout xếp ngang, wrap khi hết chỗ
 local layout = Instance.new("UIListLayout", TopBar)
 layout.FillDirection = Enum.FillDirection.Horizontal
 layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 layout.VerticalAlignment = Enum.VerticalAlignment.Center
 layout.Padding = UDim.new(0, 6)
-layout.Wraps = true                                     -- allow wrap when out of space
+layout.Wraps = true
+layout.HorizontalFlex = Enum.UIFlexAlignment.None
 
--- Helper to create text elements
+-- ===== HÀM TẠO PHẦN TỬ =====
 local function createLabel(text)
     local lbl = Instance.new("TextLabel")
     lbl.BackgroundTransparency = 1
     lbl.Text = text
     lbl.TextColor3 = Color3.new(1,1,1)
     lbl.FontFace = Font.fromName("FredokaOne", Enum.FontWeight.Bold)
-    lbl.TextScaled = false                               -- we'll control size manually
-    lbl.TextSize = 18                                    -- base, will be scaled
-    lbl.Size = UDim2.new(0, 0, 1, -4)
+    lbl.TextScaled = false
+    lbl.TextSize = 18
+    lbl.Size = UDim2.new(0, 0, 0, 24)   -- chiều cao cố định
     lbl.AutomaticSize = Enum.AutomaticSize.X
     lbl.TextXAlignment = Enum.TextXAlignment.Left
     lbl.Parent = TopBar
@@ -159,7 +165,7 @@ local function createBoxedButton(text)
     btn.FontFace = Font.fromName("FredokaOne", Enum.FontWeight.Bold)
     btn.TextScaled = false
     btn.TextSize = 18
-    btn.Size = UDim2.new(0, 0, 0.7, 0)   -- height relative to bar
+    btn.Size = UDim2.new(0, 0, 0, 24)   -- chiều cao cố định
     btn.AutomaticSize = Enum.AutomaticSize.X
     btn.TextXAlignment = Enum.TextXAlignment.Center
     btn.Parent = TopBar
@@ -167,7 +173,7 @@ local function createBoxedButton(text)
     return btn
 end
 
--- Build UI elements
+-- ===== XÂY DỰNG CÁC THÀNH PHẦN THEO ĐÚNG THỨ TỰ =====
 local usernameLabel = createLabel(LocalPlayer.Name)
 local sep1 = createLabel("|")
 local crashPrefix = createLabel("⚠️ Auto crash:")
@@ -186,7 +192,7 @@ local sep3 = createLabel("|")
 local pingPrefix = createLabel("Ping:")
 local pingValue = createLabel("0")
 
--- Store for updates
+-- Lưu để cập nhật
 local uiElements = {
     crashToggle = crashToggle,
     ramDisplay = ramDisplay,
@@ -196,17 +202,27 @@ local uiElements = {
     labels = { usernameLabel, sep1, crashPrefix, paren1, paren2, sep2, fpsPrefix, lockPrefix, lockSuffix, sep3, pingPrefix }
 }
 
--- Toggle FPS lock button (bottom‑right)
-local fpsToggleBtn = Instance.new("TextButton")
-fpsToggleBtn.Size = UDim2.new(0, 48, 0, 48)
-fpsToggleBtn.Position = UDim2.new(1, -60, 1, -60)
-fpsToggleBtn.BackgroundTransparency = 1
-fpsToggleBtn.TextScaled = true
-fpsToggleBtn.RichText = true
-fpsToggleBtn.Text = fpsLockEnabled and '<font color="rgb(0,255,0)">></font>' or '<font color="rgb(255,0,0)">X</font>'
-fpsToggleBtn.Parent = ScreenGui
+-- ===== NÚT TOGGLE BLACK SCREEN & FPS LOCK =====
+local ToggleBtn = Instance.new("TextButton")
+ToggleBtn.Size = UDim2.new(0, 50, 0, 50)
+ToggleBtn.Position = UDim2.new(1, -60, 1, -60)
+ToggleBtn.BackgroundTransparency = 1
+ToggleBtn.TextScaled = true
+ToggleBtn.RichText = true
+ToggleBtn.Text = blackScreenEnabled and '<font color="rgb(0,255,0)">></font>' or '<font color="rgb(255,0,0)">X</font>'
+ToggleBtn.Parent = ScreenGui
 
--- ================= INTERACTIONS =================
+ToggleBtn.MouseButton1Click:Connect(function()
+    blackScreenEnabled = not blackScreenEnabled
+    config.blackScreenEnabled = blackScreenEnabled
+    saveConfig()
+    Background.Visible = blackScreenEnabled
+    TopBar.Visible = blackScreenEnabled
+    ToggleBtn.Text = blackScreenEnabled and '<font color="rgb(0,255,0)">></font>' or '<font color="rgb(255,0,0)">X</font>'
+    notify("Black Screen", blackScreenEnabled and "BẬT" or "TẮT", 2)
+end)
+
+-- ===== TƯƠNG TÁC =====
 crashToggle.MouseButton1Click:Connect(function()
     autoShutdownEnabled = not autoShutdownEnabled
     config.autoCrashEnabled = autoShutdownEnabled
@@ -258,19 +274,12 @@ lockCap.MouseButton1Click:Connect(function()
     end)
 end)
 
-fpsToggleBtn.MouseButton1Click:Connect(function()
-    fpsLockEnabled = not fpsLockEnabled
-    fpsToggleBtn.Text = fpsLockEnabled and '<font color="rgb(0,255,0)">></font>' or '<font color="rgb(255,0,0)">X</font>'
-    notify("FPS Lock", fpsLockEnabled and "BẬT" or "TẮT", 2)
-end)
-
--- ================= DYNAMIC UPDATE & RESPONSIVE TEXT =================
+-- ===== CẬP NHẬT DỮ LIỆU & RESPONSIVE =====
 local fps = 0
 local lastTime = tick()
 local frameCount = 0
 
 RunService.RenderStepped:Connect(function(dt)
-    -- FPS counting
     frameCount = frameCount + 1
     local now = tick()
     if now - lastTime >= 1 then
@@ -279,11 +288,9 @@ RunService.RenderStepped:Connect(function(dt)
         lastTime = now
     end
 
-    -- Current stats
     local mem = math.floor(Stats:GetTotalMemoryUsageMb())
     local ping = math.floor(LocalPlayer:GetNetworkPing() * 1000)
 
-    -- Update text
     crashToggle.Text = autoShutdownEnabled and "On" or "Off"
     crashToggle.TextColor3 = autoShutdownEnabled and Color3.new(0,1,0) or Color3.new(1,0,0)
     ramDisplay.Text = string.format("%d/%d", mem, memoryLimitMB)
@@ -291,8 +298,18 @@ RunService.RenderStepped:Connect(function(dt)
     lockCap.Text = tostring(fpsCapValue)
     pingValue.Text = tostring(ping)
 
-    -- Rainbow effect
-    if rainbowEnabled then
+    -- Responsive font size
+    local screenWidth = workspace.CurrentCamera.ViewportSize.X
+    local baseSize = math.clamp(math.floor(screenWidth * 0.014), 14, 24)
+    for _, elem in pairs(uiElements.labels) do elem.TextSize = baseSize end
+    ramDisplay.TextSize = baseSize
+    crashToggle.TextSize = baseSize
+    lockCap.TextSize = baseSize
+    fpsValue.TextSize = baseSize
+    pingValue.TextSize = baseSize
+
+    -- Rainbow
+    if rainbowEnabled and blackScreenEnabled then
         local hue = (tick() % rainbowSpeed) / rainbowSpeed
         local color = HSVtoRGB(hue, 0.9, 1.0)
         for _, elem in pairs(uiElements.labels) do elem.TextColor3 = color end
@@ -300,7 +317,6 @@ RunService.RenderStepped:Connect(function(dt)
         fpsValue.TextColor3 = color
         lockCap.TextColor3 = color
         pingValue.TextColor3 = color
-        -- Keep crashToggle its own color
     else
         local white = Color3.new(1,1,1)
         for _, elem in pairs(uiElements.labels) do elem.TextColor3 = white end
@@ -309,19 +325,9 @@ RunService.RenderStepped:Connect(function(dt)
         lockCap.TextColor3 = white
         pingValue.TextColor3 = white
     end
-
-    -- Responsive font size: scale based on screen width
-    local screenWidth = workspace.CurrentCamera.ViewportSize.X
-    local baseSize = math.clamp(math.floor(screenWidth * 0.015), 14, 28)
-    for _, elem in pairs(uiElements.labels) do elem.TextSize = baseSize end
-    ramDisplay.TextSize = baseSize
-    crashToggle.TextSize = baseSize
-    lockCap.TextSize = baseSize
-    fpsValue.TextSize = baseSize
-    pingValue.TextSize = baseSize
 end)
 
--- ================= LOAD EXTERNAL SCRIPT =================
+-- ===== LOAD EXTERNAL =====
 local function safeLoad(url, name)
     pcall(function()
         local success, result = pcall(game.HttpGet, game, url)
@@ -337,4 +343,4 @@ safeLoad(
     "CanHongSon Loader"
 )
 
-notify("BlackScreen+", "Đã sẵn sàng. Click vào ô để chỉnh.", 5)
+notify("BlackScreen+", "Bấm nút >/< để tắt/mở. Click ô để chỉnh.", 5)
