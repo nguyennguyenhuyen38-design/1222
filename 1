@@ -183,7 +183,7 @@ RunService.RenderStepped:Connect(function(dt)
 
     -- Font size thích ứng (lớn hơn chút)
     local screenWidth = workspace.CurrentCamera.ViewportSize.X
-    local baseSize = math.clamp(math.floor(screenWidth * 0.016), 16, 26)
+    local baseSize = math.clamp(math.floor(screenWidth * 0.2), 20, 40)
     for _, lbl in ipairs(uiLabels) do lbl.TextSize = baseSize end
 
     -- Hiệu ứng cầu vồng
