@@ -447,6 +447,19 @@ logoStroke.Transparency = 0.15
 logoStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 logoStroke.Parent = LogoButton
 
+local logoFallbackText = Instance.new("TextLabel")
+logoFallbackText.Size = UDim2.new(1, -10, 1, -10)
+logoFallbackText.Position = UDim2.new(0.5, 0, 0.5, 0)
+logoFallbackText.AnchorPoint = Vector2.new(0.5, 0.5)
+logoFallbackText.BackgroundTransparency = 1
+logoFallbackText.Text = "GUI"
+logoFallbackText.TextColor3 = Color3.fromRGB(0, 255, 120)
+logoFallbackText.FontFace = Font.fromName("FredokaOne", Enum.FontWeight.Bold)
+logoFallbackText.TextScaled = true
+logoFallbackText.ZIndex = 17
+logoFallbackText.Visible = false
+logoFallbackText.Parent = LogoButton
+
 -- Kéo thả thủ công để hoạt động ổn định hơn Draggable ở nhiều executor/client
 local dragging = false
 local dragStart
@@ -496,8 +509,25 @@ task.spawn(function()
     local ok = pcall(function()
         ContentProvider:PreloadAsync({LogoButton})
     end)
-    if not ok then
-        notify("Logo", "⚠️ Không tải được ảnh logo, kiểm tra quyền asset.", 4)
+
+    -- Một số client/executor timeout asset; fallback để không mất nút logo.
+    task.wait(2.5)
+    if not ok or not LogoButton.IsLoaded then
+        LogoButton.ImageTransparency = 1
+        logoFallbackText.Visible = true
+        notify("Logo", "⚠️ Logo ảnh tải chậm/lỗi, đã bật nút fallback GUI.", 4)
+
+        -- Retry nhẹ: nếu ảnh load được sau đó thì tự trả lại logo.
+        task.spawn(function()
+            for _ = 1, 8 do
+                task.wait(1)
+                if LogoButton.IsLoaded then
+                    logoFallbackText.Visible = false
+                    LogoButton.ImageTransparency = 0
+                    return
+                end
+            end
+        end)
     end
 end)
 
