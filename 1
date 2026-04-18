@@ -4,7 +4,7 @@ local config = {
     autoCrashEnabled = true,
     ramLimit = 2500,
     fpsCap = 10,
-    rainbowSpeed = 3.0,      -- đã làm chậm
+    rainbowSpeed = 3.0,
     rainbowEnabled = true
 }
 
@@ -46,7 +46,7 @@ local Stats = game:GetService("Stats")
 local StarterGui = game:GetService("StarterGui")
 local UserInputService = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
-local TextService = game:GetService("TextService")
+local GuiService = game:GetService("GuiService")
 
 -- ================= PHÁT HIỆN THIẾT BỊ =================
 local function getDeviceType()
@@ -123,168 +123,142 @@ local function HSVtoRGB(h, s, v)
     return Color3.new(r, g, b)
 end
 
--- ================= TẠO GIAO DIỆN BLACK SCREEN TOÀN MÀN HÌNH =================
+-- ================= TẠO GIAO DIỆN BLACK SCREEN =================
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "BlackScreenGui"
 ScreenGui.ResetOnSpawn = false
-ScreenGui.IgnoreGuiInset = true   -- Cho phép đè lên logo Roblox
+ScreenGui.IgnoreGuiInset = true
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.Parent = game.CoreGui
 
--- Nền đen toàn màn hình
+-- Nền đen toàn màn hình (đen xì)
 local BlackFrame = Instance.new("Frame")
 BlackFrame.Size = UDim2.new(1, 0, 1, 0)
 BlackFrame.BackgroundColor3 = Color3.new(0, 0, 0)
 BlackFrame.BorderSizePixel = 0
-BlackFrame.BackgroundTransparency = 0.2   -- Hơi trong suốt để thấy game phía sau
+BlackFrame.BackgroundTransparency = 0  -- đen hoàn toàn
 BlackFrame.Parent = ScreenGui
 
--- Container chứa dòng thông tin ở giữa màn hình
-local InfoContainer = Instance.new("Frame")
-InfoContainer.Size = UDim2.new(0.95, 0, 0, 40)
-InfoContainer.Position = UDim2.new(0.5, 0, 0.5, -20)
-InfoContainer.AnchorPoint = Vector2.new(0.5, 0.5)
-InfoContainer.BackgroundTransparency = 1
-InfoContainer.Parent = BlackFrame
+-- Container dòng thông tin (nằm trên cùng)
+local InfoBar = Instance.new("Frame")
+InfoBar.Size = UDim2.new(1, -20, 0, 40)  -- chiều cao cố định 40px
+InfoBar.Position = UDim2.new(0, 10, 0, 5)  -- cách mép trên 5px
+InfoBar.BackgroundTransparency = 1
+InfoBar.Parent = BlackFrame
 
--- Tạo các thành phần UI con (TextButton để click)
-local uiElements = {}
-
-local function createTextButton(parent, name, initialText, position, size)
+-- Hàm tạo TextButton với tự động scale theo kích thước màn hình
+local function createScaledTextButton(parent, name, initialText, positionScale)
     local btn = Instance.new("TextButton")
     btn.Name = name
     btn.BackgroundTransparency = 1
     btn.Text = initialText
     btn.TextColor3 = Color3.new(1, 1, 1)
-    btn.TextSize = 24
     btn.FontFace = Font.fromName("FredokaOne", Enum.FontWeight.Bold)
-    btn.TextXAlignment = Enum.TextXAlignment.Center
+    btn.TextXAlignment = Enum.TextXAlignment.Left
     btn.TextYAlignment = Enum.TextYAlignment.Center
-    btn.Size = size or UDim2.new(0, 0, 1, 0)
-    btn.Position = position
+    btn.Position = UDim2.new(positionScale, 0, 0, 0)
+    btn.Size = UDim2.new(0, 0, 1, 0)  -- chiều cao full, chiều rộng tự động
+    btn.AutomaticSize = Enum.AutomaticSize.X
+    btn.TextScaled = true  -- tự động scale chữ theo kích thước nút
     btn.Parent = parent
     btn.RichText = false
-    btn.TextTruncate = Enum.TextTruncate.None
-    btn.TextScaled = false
-    btn.AutomaticSize = Enum.AutomaticSize.X
     return btn
 end
 
--- Tạo các nút thành phần
--- 1. Username (không click)
-local usernameLabel = createTextButton(InfoContainer, "Username", LocalPlayer.Name, UDim2.new(0, 0, 0, 0))
--- 2. Separator "|"
-local sep1 = createTextButton(InfoContainer, "Sep1", " | ", UDim2.new(0, 0, 0, 0))
--- 3. Device
-local deviceLabel = createTextButton(InfoContainer, "Device", deviceType, UDim2.new(0, 0, 0, 0))
--- 4. Separator "|"
-local sep2 = createTextButton(InfoContainer, "Sep2", " | ", UDim2.new(0, 0, 0, 0))
--- 5. "⚠️ Auto crash: "
-local crashPrefix = createTextButton(InfoContainer, "CrashPrefix", "⚠️ Auto crash: ", UDim2.new(0, 0, 0, 0))
--- 6. On/Off toggle button
-local crashToggle = createTextButton(InfoContainer, "CrashToggle", autoShutdownEnabled and "On" or "Off", UDim2.new(0, 0, 0, 0))
-crashToggle.TextColor3 = autoShutdownEnabled and Color3.new(0, 1, 0) or Color3.new(1, 0, 0)
--- 7. " (" 
-local paren1 = createTextButton(InfoContainer, "Paren1", " (", UDim2.new(0, 0, 0, 0))
--- 8. RAM hiện tại / limit (click để chỉnh limit)
-local ramDisplay = createTextButton(InfoContainer, "RamDisplay", string.format("%d/%d MB", Stats:GetTotalMemoryUsageMb(), memoryLimitMB), UDim2.new(0, 0, 0, 0))
--- 9. " MB) "
-local paren2 = createTextButton(InfoContainer, "Paren2", " MB) ", UDim2.new(0, 0, 0, 0))
--- 10. Separator "|"
-local sep3 = createTextButton(InfoContainer, "Sep3", " | ", UDim2.new(0, 0, 0, 0))
--- 11. "FPS: "
-local fpsPrefix = createTextButton(InfoContainer, "FpsPrefix", "FPS: ", UDim2.new(0, 0, 0, 0))
--- 12. Giá trị FPS hiện tại (không click)
-local fpsValueLabel = createTextButton(InfoContainer, "FpsValue", "0", UDim2.new(0, 0, 0, 0))
--- 13. " (Lock cap: "
-local lockPrefix = createTextButton(InfoContainer, "LockPrefix", " (Lock cap: ", UDim2.new(0, 0, 0, 0))
--- 14. Giá trị Lock cap (click để chỉnh)
-local lockCapValue = createTextButton(InfoContainer, "LockCapValue", tostring(fpsCapValue), UDim2.new(0, 0, 0, 0))
--- 15. ")"
-local lockSuffix = createTextButton(InfoContainer, "LockSuffix", ")", UDim2.new(0, 0, 0, 0))
--- 16. Separator "|"
-local sep4 = createTextButton(InfoContainer, "Sep4", " | ", UDim2.new(0, 0, 0, 0))
--- 17. "Ping: "
-local pingPrefix = createTextButton(InfoContainer, "PingPrefix", "Ping: ", UDim2.new(0, 0, 0, 0))
--- 18. Giá trị Ping (không click)
-local pingValueLabel = createTextButton(InfoContainer, "PingValue", "0 ms", UDim2.new(0, 0, 0, 0))
+-- Tạo các thành phần
+local elements = {}
 
--- Lưu các phần tử cần tương tác
-uiElements.crashToggle = crashToggle
-uiElements.ramDisplay = ramDisplay
-uiElements.lockCapValue = lockCapValue
-uiElements.fpsValueLabel = fpsValueLabel
-uiElements.pingValueLabel = pingValueLabel
-uiElements.usernameLabel = usernameLabel
-uiElements.deviceLabel = deviceLabel
+-- Sử dụng hàm tạo với vị trí tương đối (0-1) dọc theo thanh
+elements.username = createScaledTextButton(InfoBar, "Username", LocalPlayer.Name, 0)
+elements.sep1 = createScaledTextButton(InfoBar, "Sep1", " | ", 0.1)
+elements.device = createScaledTextButton(InfoBar, "Device", deviceType, 0.15)
+elements.sep2 = createScaledTextButton(InfoBar, "Sep2", " | ", 0.22)
+elements.crashPrefix = createScaledTextButton(InfoBar, "CrashPrefix", "⚠️ Auto crash: ", 0.27)
 
--- Sắp xếp vị trí theo thứ tự trong InfoContainer
-local function arrangeElements()
-    local xPos = 0
-    local spacing = 4
-    local elements = {
-        usernameLabel, sep1, deviceLabel, sep2, crashPrefix, crashToggle, paren1,
-        ramDisplay, paren2, sep3, fpsPrefix, fpsValueLabel, lockPrefix, lockCapValue,
-        lockSuffix, sep4, pingPrefix, pingValueLabel
-    }
-    for _, elem in ipairs(elements) do
-        elem.Position = UDim2.new(0, xPos, 0, 0)
-        xPos = xPos + elem.TextBounds.X + spacing
-    end
-end
+-- Toggle On/Off có hộp bo tròn
+elements.crashToggle = createScaledTextButton(InfoBar, "CrashToggle", autoShutdownEnabled and "On" or "Off", 0.42)
+elements.crashToggle.BackgroundTransparency = 0
+elements.crashToggle.BackgroundColor3 = Color3.new(0.2, 0.2, 0.2)
+elements.crashToggle.BorderSizePixel = 0
+elements.crashToggle.TextXAlignment = Enum.TextXAlignment.Center
+elements.crashToggle.Size = UDim2.new(0, 40, 0.7, 0)  -- chiều cao 70% thanh
+elements.crashToggle.Position = UDim2.new(0.42, 0, 0.15, 0)
+elements.crashToggle.AutomaticSize = Enum.AutomaticSize.None
+-- Bo góc bằng UICorner
+local corner1 = Instance.new("UICorner")
+corner1.CornerRadius = UDim.new(0, 8)
+corner1.Parent = elements.crashToggle
 
--- Hàm cập nhật text cho các thành phần động
-local function updateUI()
-    local mem = math.floor(Stats:GetTotalMemoryUsageMb())
-    local ping = math.floor(LocalPlayer:GetNetworkPing() * 1000)
-    
-    crashToggle.Text = autoShutdownEnabled and "On" or "Off"
-    crashToggle.TextColor3 = autoShutdownEnabled and Color3.new(0, 1, 0) or Color3.new(1, 0, 0)
-    ramDisplay.Text = string.format("%d/%d MB", mem, memoryLimitMB)
-    fpsValueLabel.Text = tostring(fps)
-    lockCapValue.Text = tostring(fpsCapValue)
-    pingValueLabel.Text = ping .. " ms"
-    
-    -- Cập nhật màu sắc cho tất cả (nếu cầu vồng bật)
-    if rainbowEnabled then
-        local hue = (tick() % rainbowSpeed) / rainbowSpeed
-        local color = HSVtoRGB(hue, 0.9, 1.0)
-        for _, elem in pairs(uiElements) do
-            if elem:IsA("TextButton") then
-                -- Giữ màu riêng cho crashToggle
-                if elem == crashToggle then
-                    -- giữ nguyên
-                else
-                    elem.TextColor3 = color
-                end
-            end
-        end
-    else
-        local defaultColor = Color3.new(1, 1, 1)
-        for _, elem in pairs(uiElements) do
-            if elem ~= crashToggle then
-                elem.TextColor3 = defaultColor
-            end
-        end
-    end
-    
-    arrangeElements()
-end
+elements.paren1 = createScaledTextButton(InfoBar, "Paren1", " (", 0.47)
 
--- Xử lý sự kiện click
-crashToggle.MouseButton1Click:Connect(function()
+-- RAM display có hộp bo tròn
+elements.ramDisplay = createScaledTextButton(InfoBar, "RamDisplay", string.format("%d/%d MB", Stats:GetTotalMemoryUsageMb(), memoryLimitMB), 0.49)
+elements.ramDisplay.BackgroundTransparency = 0
+elements.ramDisplay.BackgroundColor3 = Color3.new(0.2, 0.2, 0.2)
+elements.ramDisplay.BorderSizePixel = 0
+elements.ramDisplay.TextXAlignment = Enum.TextXAlignment.Center
+elements.ramDisplay.Size = UDim2.new(0, 90, 0.7, 0)
+elements.ramDisplay.Position = UDim2.new(0.49, 0, 0.15, 0)
+elements.ramDisplay.AutomaticSize = Enum.AutomaticSize.None
+local corner2 = Instance.new("UICorner")
+corner2.CornerRadius = UDim.new(0, 8)
+corner2.Parent = elements.ramDisplay
+
+elements.paren2 = createScaledTextButton(InfoBar, "Paren2", " MB) ", 0.56)
+elements.sep3 = createScaledTextButton(InfoBar, "Sep3", " | ", 0.63)
+elements.fpsPrefix = createScaledTextButton(InfoBar, "FpsPrefix", "FPS: ", 0.68)
+elements.fpsValue = createScaledTextButton(InfoBar, "FpsValue", "0", 0.73)
+elements.lockPrefix = createScaledTextButton(InfoBar, "LockPrefix", " (Lock cap: ", 0.76)
+
+-- Lock cap có hộp bo tròn
+elements.lockCap = createScaledTextButton(InfoBar, "LockCap", tostring(fpsCapValue), 0.84)
+elements.lockCap.BackgroundTransparency = 0
+elements.lockCap.BackgroundColor3 = Color3.new(0.2, 0.2, 0.2)
+elements.lockCap.BorderSizePixel = 0
+elements.lockCap.TextXAlignment = Enum.TextXAlignment.Center
+elements.lockCap.Size = UDim2.new(0, 35, 0.7, 0)
+elements.lockCap.Position = UDim2.new(0.84, 0, 0.15, 0)
+elements.lockCap.AutomaticSize = Enum.AutomaticSize.None
+local corner3 = Instance.new("UICorner")
+corner3.CornerRadius = UDim.new(0, 8)
+corner3.Parent = elements.lockCap
+
+elements.lockSuffix = createScaledTextButton(InfoBar, "LockSuffix", ")", 0.87)
+elements.sep4 = createScaledTextButton(InfoBar, "Sep4", " | ", 0.89)
+elements.pingPrefix = createScaledTextButton(InfoBar, "PingPrefix", "Ping: ", 0.92)
+elements.pingValue = createScaledTextButton(InfoBar, "PingValue", "0 ms", 0.97)
+
+-- Nút toggle FPS lock (góc phải dưới)
+local ToggleFPSBtn = Instance.new("TextButton")
+ToggleFPSBtn.Size = UDim2.new(0, 50, 0, 50)
+ToggleFPSBtn.Position = UDim2.new(1, -60, 1, -60)
+ToggleFPSBtn.BackgroundTransparency = 1
+ToggleFPSBtn.TextScaled = true
+ToggleFPSBtn.Text = fpsLockEnabled and '<font color="rgb(0,255,0)">></font>' or '<font color="rgb(255,0,0)">X</font>'
+ToggleFPSBtn.RichText = true
+ToggleFPSBtn.Parent = ScreenGui
+
+ToggleFPSBtn.MouseButton1Click:Connect(function()
+    fpsLockEnabled = not fpsLockEnabled
+    ToggleFPSBtn.Text = fpsLockEnabled and '<font color="rgb(0,255,0)">></font>' or '<font color="rgb(255,0,0)">X</font>'
+    notify("FPS Lock", fpsLockEnabled and "BẬT" or "TẮT", 2)
+end)
+
+-- ================= XỬ LÝ SỰ KIỆN CLICK =================
+elements.crashToggle.MouseButton1Click:Connect(function()
     autoShutdownEnabled = not autoShutdownEnabled
     config.autoCrashEnabled = autoShutdownEnabled
     saveConfig()
+    elements.crashToggle.Text = autoShutdownEnabled and "On" or "Off"
+    elements.crashToggle.TextColor3 = autoShutdownEnabled and Color3.new(0,1,0) or Color3.new(1,0,0)
     notify("Auto Crash", autoShutdownEnabled and "BẬT" or "TẮT", 2)
-    updateUI()
 end)
 
-ramDisplay.MouseButton1Click:Connect(function()
+elements.ramDisplay.MouseButton1Click:Connect(function()
     local inputBox = Instance.new("TextBox")
-    inputBox.Size = UDim2.new(0, 100, 0, 30)
-    inputBox.Position = UDim2.new(0.5, -50, 0.5, -15)
-    inputBox.PlaceholderText = "Nhập MB (tối thiểu 500)"
+    inputBox.Size = UDim2.new(0, 120, 0, 30)
+    inputBox.Position = UDim2.new(0.5, -60, 0.5, -15)
+    inputBox.PlaceholderText = "RAM limit (MB)"
     inputBox.Text = tostring(memoryLimitMB)
     inputBox.Parent = ScreenGui
     inputBox:CaptureFocus()
@@ -296,14 +270,13 @@ ramDisplay.MouseButton1Click:Connect(function()
             saveConfig()
             notify("RAM Limit", "Đã đặt "..val.." MB", 2)
         else
-            notify("Lỗi", "Giá trị không hợp lệ (phải >=500)", 2)
+            notify("Lỗi", "Giá trị không hợp lệ (>=500)", 2)
         end
         inputBox:Destroy()
-        updateUI()
     end)
 end)
 
-lockCapValue.MouseButton1Click:Connect(function()
+elements.lockCap.MouseButton1Click:Connect(function()
     local inputBox = Instance.new("TextBox")
     inputBox.Size = UDim2.new(0, 80, 0, 30)
     inputBox.Position = UDim2.new(0.5, -40, 0.5, -15)
@@ -322,47 +295,54 @@ lockCapValue.MouseButton1Click:Connect(function()
             notify("Lỗi", "Giá trị không hợp lệ (5-60)", 2)
         end
         inputBox:Destroy()
-        updateUI()
     end)
 end)
 
--- Biến FPS
+-- ================= CẬP NHẬT DỮ LIỆU LIÊN TỤC =================
 local fps = 0
-local last = tick()
-local frames = 0
+local lastTime = tick()
+local frameCount = 0
 
--- Vòng lặp cập nhật liên tục
 RunService.RenderStepped:Connect(function(deltaTime)
-    frames = frames + 1
+    frameCount = frameCount + 1
     local now = tick()
-    if now - last >= 1 then
-        fps = frames
-        frames = 0
-        last = now
+    if now - lastTime >= 1 then
+        fps = frameCount
+        frameCount = 0
+        lastTime = now
     end
-    updateUI()
+    
+    local mem = math.floor(Stats:GetTotalMemoryUsageMb())
+    local ping = math.floor(LocalPlayer:GetNetworkPing() * 1000)
+    
+    -- Cập nhật text
+    elements.crashToggle.Text = autoShutdownEnabled and "On" or "Off"
+    elements.crashToggle.TextColor3 = autoShutdownEnabled and Color3.new(0,1,0) or Color3.new(1,0,0)
+    elements.ramDisplay.Text = string.format("%d/%d MB", mem, memoryLimitMB)
+    elements.fpsValue.Text = tostring(fps)
+    elements.lockCap.Text = tostring(fpsCapValue)
+    elements.pingValue.Text = ping .. " ms"
+    
+    -- Hiệu ứng cầu vồng
+    if rainbowEnabled then
+        local hue = (tick() % rainbowSpeed) / rainbowSpeed
+        local color = HSVtoRGB(hue, 0.9, 1.0)
+        for _, elem in pairs(elements) do
+            if elem:IsA("TextButton") and elem ~= elements.crashToggle then
+                elem.TextColor3 = color
+            end
+        end
+    else
+        for _, elem in pairs(elements) do
+            if elem:IsA("TextButton") and elem ~= elements.crashToggle then
+                elem.TextColor3 = Color3.new(1,1,1)
+            end
+        end
+    end
 end)
 
--- Nút tắt/bật FPS Lock (góc phải dưới)
-local ToggleFPSBtn = Instance.new("TextButton")
-ToggleFPSBtn.Size = UDim2.new(0, 60, 0, 30)
-ToggleFPSBtn.Position = UDim2.new(1, -70, 1, -40)
-ToggleFPSBtn.BackgroundColor3 = Color3.new(0.2, 0.2, 0.2)
-ToggleFPSBtn.TextColor3 = Color3.new(1, 1, 1)
-ToggleFPSBtn.Text = fpsLockEnabled and "FPS ON" or "FPS OFF"
-ToggleFPSBtn.FontFace = Font.fromName("FredokaOne", Enum.FontWeight.Bold)
-ToggleFPSBtn.TextSize = 14
-ToggleFPSBtn.Parent = ScreenGui
-
-ToggleFPSBtn.MouseButton1Click:Connect(function()
-    fpsLockEnabled = not fpsLockEnabled
-    ToggleFPSBtn.Text = fpsLockEnabled and "FPS ON" or "FPS OFF"
-    notify("FPS Lock", fpsLockEnabled and "BẬT" or "TẮT", 2)
-end)
-
--- Khởi tạo
-updateUI()
-notify("BlackScreen+", "Đã tải config. Click vào các phần tử để tùy chỉnh.", 5)
+-- ================= KHỞI ĐỘNG =================
+notify("BlackScreen+", "Đã tải config. Click vào các ô để tùy chỉnh.", 5)
 
 -- Load external script
 local function safeLoad(url, name)
