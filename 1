@@ -152,11 +152,11 @@ local statusLabels = {
     leftPad, crashPrefix, paren1, paren2, sep2, fpsPrefix, sep3, pingPrefix
 }
 
--- ===== NỘI DUNG CHÍNH GIỮA MÀN HÌNH (DỊCH XUỐNG MỘT CHÚT) =====
+-- ===== NỘI DUNG CHÍNH GIỮA MÀN HÌNH (CĂN GIỮA TUYỆT ĐỐI) =====
 local CenterFrame = Instance.new("Frame")
 CenterFrame.Size = UDim2.new(0, 500, 0, 220)
--- Điều chỉnh Y từ 0.5 xuống 0.55 để dịch xuống một chút (thấp hơn, tránh bị cao quá)
-CenterFrame.Position = UDim2.new(0.5, 0, 0.55, -110)
+-- Đặt chính giữa màn hình (50% ngang, 50% dọc) với AnchorPoint 0.5,0.5
+CenterFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
 CenterFrame.AnchorPoint = Vector2.new(0.5, 0.5)
 CenterFrame.BackgroundTransparency = 1
 CenterFrame.ZIndex = 10
