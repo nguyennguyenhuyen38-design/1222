@@ -1,14 +1,13 @@
--- ================= CONFIG LOADER (TỰ ĐỘNG LƯU CẤU HÌNH) =================
+-- ================= CONFIG LOADER (LƯU VĨNH VIỄN) =================
 local CONFIG_FILE = "BlackScreen_Config.json"
 local config = {
     autoCrashEnabled = true,
     ramLimit = 2500,
     fpsCap = 10,
-    rainbowSpeed = 3.0,  -- mặc định chậm hơn
+    rainbowSpeed = 3.0,      -- đã làm chậm
     rainbowEnabled = true
 }
 
--- Hàm đọc config từ file (nếu executor hỗ trợ)
 local function loadConfig()
     pcall(function()
         if readfile and writefile then
@@ -24,7 +23,6 @@ local function loadConfig()
 end
 loadConfig()
 
--- Hàm lưu config
 local function saveConfig()
     pcall(function()
         if writefile then
@@ -33,14 +31,13 @@ local function saveConfig()
     end)
 end
 
--- ================= CÁC BIẾN GLOBAL =================
+-- ================= BIẾN TOÀN CỤC =================
 local fpsLockEnabled = true
 local autoShutdownEnabled = config.autoCrashEnabled
 local memoryLimitMB = config.ramLimit
 local fpsCapValue = config.fpsCap
 local rainbowSpeed = config.rainbowSpeed
 local rainbowEnabled = config.rainbowEnabled
-local shutdownCheckInterval = 5
 
 -- ================= SERVICES =================
 local Players = game:GetService("Players")
@@ -49,6 +46,7 @@ local Stats = game:GetService("Stats")
 local StarterGui = game:GetService("StarterGui")
 local UserInputService = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
+local TextService = game:GetService("TextService")
 
 -- ================= PHÁT HIỆN THIẾT BỊ =================
 local function getDeviceType()
@@ -62,23 +60,6 @@ local function getDeviceType()
     end
 end
 local deviceType = getDeviceType()
-
--- ================= SAFE LOAD FUNCTION =================
-local function safeLoad(url, name)
-    local success, result = pcall(function()
-        return game:HttpGet(url)
-    end)
-    if not success then
-        warn("[ERROR] Không load được: " .. name)
-        return
-    end
-    local func = loadstring(result)
-    if not func then
-        warn("[ERROR] Lỗi loadstring: " .. name)
-        return
-    end
-    pcall(func)
-end
 
 -- ================= NOTIFY =================
 local function notify(title, text, duration)
@@ -94,12 +75,12 @@ end
 -- ================= AUTO SHUTDOWN MONITOR =================
 task.spawn(function()
     while true do
-        task.wait(shutdownCheckInterval)
+        task.wait(5)
         if autoShutdownEnabled then
             pcall(function()
                 local currentMem = Stats:GetTotalMemoryUsageMb()
                 if currentMem >= memoryLimitMB then
-                    notify("⚠️ CẢNH BÁO RAM", string.format("%d/%d MB - Tự thoát sau 3s", currentMem, memoryLimitMB), 5)
+                    notify("⚠️ CẢNH BÁO RAM", string.format("%d/%d MB - Thoát sau 3s", currentMem, memoryLimitMB), 5)
                     task.wait(3)
                     game:Shutdown()
                 end
@@ -142,151 +123,215 @@ local function HSVtoRGB(h, s, v)
     return Color3.new(r, g, b)
 end
 
--- ================= UI: THANH TRẠNG THÁI TRÊN CÙNG =================
+-- ================= TẠO GIAO DIỆN BLACK SCREEN TOÀN MÀN HÌNH =================
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "BlackScreenGui"
 ScreenGui.ResetOnSpawn = false
-ScreenGui.IgnoreGuiInset = true
+ScreenGui.IgnoreGuiInset = true   -- Cho phép đè lên logo Roblox
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.Parent = game.CoreGui
 
--- Khung nền mờ
-local Background = Instance.new("Frame")
-Background.Size = UDim2.new(1, 0, 0, 30)
-Background.Position = UDim2.new(0, 0, 0, 0)
-Background.BackgroundColor3 = Color3.new(0, 0, 0)
-Background.BackgroundTransparency = 0.5
-Background.BorderSizePixel = 0
-Background.Parent = ScreenGui
+-- Nền đen toàn màn hình
+local BlackFrame = Instance.new("Frame")
+BlackFrame.Size = UDim2.new(1, 0, 1, 0)
+BlackFrame.BackgroundColor3 = Color3.new(0, 0, 0)
+BlackFrame.BorderSizePixel = 0
+BlackFrame.BackgroundTransparency = 0.2   -- Hơi trong suốt để thấy game phía sau
+BlackFrame.Parent = ScreenGui
 
--- Label chính hiển thị toàn bộ thông tin
-local InfoLabel = Instance.new("TextLabel")
-InfoLabel.Size = UDim2.new(1, -10, 1, 0)
-InfoLabel.Position = UDim2.new(0, 5, 0, 0)
-InfoLabel.BackgroundTransparency = 1
-InfoLabel.TextColor3 = Color3.new(1, 1, 1)
-InfoLabel.TextXAlignment = Enum.TextXAlignment.Left
-InfoLabel.TextSize = 14
-InfoLabel.FontFace = Font.fromName("FredokaOne", Enum.FontWeight.Regular)
-InfoLabel.Parent = Background
+-- Container chứa dòng thông tin ở giữa màn hình
+local InfoContainer = Instance.new("Frame")
+InfoContainer.Size = UDim2.new(0.95, 0, 0, 40)
+InfoContainer.Position = UDim2.new(0.5, 0, 0.5, -20)
+InfoContainer.AnchorPoint = Vector2.new(0.5, 0.5)
+InfoContainer.BackgroundTransparency = 1
+InfoContainer.Parent = BlackFrame
 
--- Nút toggle FPS Lock (nhỏ góc phải)
-local ToggleBtn = Instance.new("TextButton")
-ToggleBtn.Size = UDim2.new(0, 50, 0, 30)
-ToggleBtn.Position = UDim2.new(1, -55, 0, 0)
-ToggleBtn.BackgroundColor3 = Color3.new(0.2, 0.2, 0.2)
-ToggleBtn.BorderSizePixel = 0
-ToggleBtn.TextColor3 = Color3.new(1, 1, 1)
-ToggleBtn.TextSize = 12
-ToggleBtn.Text = "FPS OFF"
-ToggleBtn.FontFace = Font.fromName("FredokaOne", Enum.FontWeight.Bold)
-ToggleBtn.Parent = ScreenGui
+-- Tạo các thành phần UI con (TextButton để click)
+local uiElements = {}
 
--- Biến UI động
-local fps = 0
-local last = tick()
-local frames = 0
-local hueShift = 0
+local function createTextButton(parent, name, initialText, position, size)
+    local btn = Instance.new("TextButton")
+    btn.Name = name
+    btn.BackgroundTransparency = 1
+    btn.Text = initialText
+    btn.TextColor3 = Color3.new(1, 1, 1)
+    btn.TextSize = 24
+    btn.FontFace = Font.fromName("FredokaOne", Enum.FontWeight.Bold)
+    btn.TextXAlignment = Enum.TextXAlignment.Center
+    btn.TextYAlignment = Enum.TextYAlignment.Center
+    btn.Size = size or UDim2.new(0, 0, 1, 0)
+    btn.Position = position
+    btn.Parent = parent
+    btn.RichText = false
+    btn.TextTruncate = Enum.TextTruncate.None
+    btn.TextScaled = false
+    btn.AutomaticSize = Enum.AutomaticSize.X
+    return btn
+end
 
--- Hàm cập nhật text trên thanh
-local function updateInfoLabel()
+-- Tạo các nút thành phần
+-- 1. Username (không click)
+local usernameLabel = createTextButton(InfoContainer, "Username", LocalPlayer.Name, UDim2.new(0, 0, 0, 0))
+-- 2. Separator "|"
+local sep1 = createTextButton(InfoContainer, "Sep1", " | ", UDim2.new(0, 0, 0, 0))
+-- 3. Device
+local deviceLabel = createTextButton(InfoContainer, "Device", deviceType, UDim2.new(0, 0, 0, 0))
+-- 4. Separator "|"
+local sep2 = createTextButton(InfoContainer, "Sep2", " | ", UDim2.new(0, 0, 0, 0))
+-- 5. "⚠️ Auto crash: "
+local crashPrefix = createTextButton(InfoContainer, "CrashPrefix", "⚠️ Auto crash: ", UDim2.new(0, 0, 0, 0))
+-- 6. On/Off toggle button
+local crashToggle = createTextButton(InfoContainer, "CrashToggle", autoShutdownEnabled and "On" or "Off", UDim2.new(0, 0, 0, 0))
+crashToggle.TextColor3 = autoShutdownEnabled and Color3.new(0, 1, 0) or Color3.new(1, 0, 0)
+-- 7. " (" 
+local paren1 = createTextButton(InfoContainer, "Paren1", " (", UDim2.new(0, 0, 0, 0))
+-- 8. RAM hiện tại / limit (click để chỉnh limit)
+local ramDisplay = createTextButton(InfoContainer, "RamDisplay", string.format("%d/%d MB", Stats:GetTotalMemoryUsageMb(), memoryLimitMB), UDim2.new(0, 0, 0, 0))
+-- 9. " MB) "
+local paren2 = createTextButton(InfoContainer, "Paren2", " MB) ", UDim2.new(0, 0, 0, 0))
+-- 10. Separator "|"
+local sep3 = createTextButton(InfoContainer, "Sep3", " | ", UDim2.new(0, 0, 0, 0))
+-- 11. "FPS: "
+local fpsPrefix = createTextButton(InfoContainer, "FpsPrefix", "FPS: ", UDim2.new(0, 0, 0, 0))
+-- 12. Giá trị FPS hiện tại (không click)
+local fpsValueLabel = createTextButton(InfoContainer, "FpsValue", "0", UDim2.new(0, 0, 0, 0))
+-- 13. " (Lock cap: "
+local lockPrefix = createTextButton(InfoContainer, "LockPrefix", " (Lock cap: ", UDim2.new(0, 0, 0, 0))
+-- 14. Giá trị Lock cap (click để chỉnh)
+local lockCapValue = createTextButton(InfoContainer, "LockCapValue", tostring(fpsCapValue), UDim2.new(0, 0, 0, 0))
+-- 15. ")"
+local lockSuffix = createTextButton(InfoContainer, "LockSuffix", ")", UDim2.new(0, 0, 0, 0))
+-- 16. Separator "|"
+local sep4 = createTextButton(InfoContainer, "Sep4", " | ", UDim2.new(0, 0, 0, 0))
+-- 17. "Ping: "
+local pingPrefix = createTextButton(InfoContainer, "PingPrefix", "Ping: ", UDim2.new(0, 0, 0, 0))
+-- 18. Giá trị Ping (không click)
+local pingValueLabel = createTextButton(InfoContainer, "PingValue", "0 ms", UDim2.new(0, 0, 0, 0))
+
+-- Lưu các phần tử cần tương tác
+uiElements.crashToggle = crashToggle
+uiElements.ramDisplay = ramDisplay
+uiElements.lockCapValue = lockCapValue
+uiElements.fpsValueLabel = fpsValueLabel
+uiElements.pingValueLabel = pingValueLabel
+uiElements.usernameLabel = usernameLabel
+uiElements.deviceLabel = deviceLabel
+
+-- Sắp xếp vị trí theo thứ tự trong InfoContainer
+local function arrangeElements()
+    local xPos = 0
+    local spacing = 4
+    local elements = {
+        usernameLabel, sep1, deviceLabel, sep2, crashPrefix, crashToggle, paren1,
+        ramDisplay, paren2, sep3, fpsPrefix, fpsValueLabel, lockPrefix, lockCapValue,
+        lockSuffix, sep4, pingPrefix, pingValueLabel
+    }
+    for _, elem in ipairs(elements) do
+        elem.Position = UDim2.new(0, xPos, 0, 0)
+        xPos = xPos + elem.TextBounds.X + spacing
+    end
+end
+
+-- Hàm cập nhật text cho các thành phần động
+local function updateUI()
     local mem = math.floor(Stats:GetTotalMemoryUsageMb())
     local ping = math.floor(LocalPlayer:GetNetworkPing() * 1000)
     
-    local crashStatus = autoShutdownEnabled and "On" or "Off"
-    local ramDisplay = string.format("%d/%d MB", mem, memoryLimitMB)
-    local fpsDisplay = fpsLockEnabled and fpsCapValue or "Off"
-    local lockCapDisplay = fpsLockEnabled and fpsCapValue or "60"
+    crashToggle.Text = autoShutdownEnabled and "On" or "Off"
+    crashToggle.TextColor3 = autoShutdownEnabled and Color3.new(0, 1, 0) or Color3.new(1, 0, 0)
+    ramDisplay.Text = string.format("%d/%d MB", mem, memoryLimitMB)
+    fpsValueLabel.Text = tostring(fps)
+    lockCapValue.Text = tostring(fpsCapValue)
+    pingValueLabel.Text = ping .. " ms"
     
-    local text = string.format("%s | %s | ⚠️ Auto crash: %s (%s) | FPS: %d (Lock cap: %s) | Ping: %d ms",
-        LocalPlayer.Name,
-        deviceType,
-        crashStatus,
-        ramDisplay,
-        fps,
-        lockCapDisplay,
-        ping
-    )
-    
-    InfoLabel.Text = text
-end
-
--- Xử lý sự kiện click vào InfoLabel để điều khiển (phân vùng)
-InfoLabel.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        local mousePos = UserInputService:GetMouseLocation()
-        local guiPos = InfoLabel.AbsolutePosition
-        local guiSize = InfoLabel.AbsoluteSize
-        local relativeX = (mousePos.X - guiPos.X) / guiSize.X
-        
-        -- Phân tích vùng click dựa trên text (ước lượng)
-        if relativeX >= 0.1 and relativeX <= 0.2 then
-            -- Vùng Auto crash (bật/tắt)
-            autoShutdownEnabled = not autoShutdownEnabled
-            config.autoCrashEnabled = autoShutdownEnabled
-            saveConfig()
-            notify("Auto Crash", autoShutdownEnabled and "BẬT" or "TẮT", 2)
-        elseif relativeX >= 0.25 and relativeX <= 0.4 then
-            -- Vùng RAM limit: mở prompt nhập giá trị mới
-            local newLimit = tonumber(pcall(function() return game:HttpGet("") end) and "0") -- placeholder for prompt
-            -- Sử dụng một thủ thuật: tạo một TextBox ẩn để nhập
-            local inputBox = Instance.new("TextBox")
-            inputBox.Size = UDim2.new(0, 100, 0, 30)
-            inputBox.Position = UDim2.new(0.3, 0, 0.5, -15)
-            inputBox.PlaceholderText = "Nhập MB (min 500)"
-            inputBox.Text = tostring(memoryLimitMB)
-            inputBox.Parent = ScreenGui
-            inputBox:CaptureFocus()
-            inputBox.FocusLost:Connect(function(enterPressed)
-                local val = tonumber(inputBox.Text)
-                if val and val >= 500 then
-                    memoryLimitMB = val
-                    config.ramLimit = val
-                    saveConfig()
-                    notify("RAM Limit", "Đã đặt "..val.." MB", 2)
+    -- Cập nhật màu sắc cho tất cả (nếu cầu vồng bật)
+    if rainbowEnabled then
+        local hue = (tick() % rainbowSpeed) / rainbowSpeed
+        local color = HSVtoRGB(hue, 0.9, 1.0)
+        for _, elem in pairs(uiElements) do
+            if elem:IsA("TextButton") then
+                -- Giữ màu riêng cho crashToggle
+                if elem == crashToggle then
+                    -- giữ nguyên
+                else
+                    elem.TextColor3 = color
                 end
-                inputBox:Destroy()
-            end)
-        elseif relativeX >= 0.45 and relativeX <= 0.55 then
-            -- Vùng FPS lock: bật/tắt
-            fpsLockEnabled = not fpsLockEnabled
-            ToggleBtn.Text = fpsLockEnabled and "FPS ON" or "FPS OFF"
-            notify("FPS Lock", fpsLockEnabled and "BẬT (cap "..fpsCapValue..")" or "TẮT (60)", 2)
-        elseif relativeX >= 0.55 and relativeX <= 0.7 then
-            -- Vùng Lock cap value: mở prompt nhập
-            local inputBox = Instance.new("TextBox")
-            inputBox.Size = UDim2.new(0, 80, 0, 30)
-            inputBox.Position = UDim2.new(0.55, 0, 0.5, -15)
-            inputBox.PlaceholderText = "FPS Cap"
-            inputBox.Text = tostring(fpsCapValue)
-            inputBox.Parent = ScreenGui
-            inputBox:CaptureFocus()
-            inputBox.FocusLost:Connect(function(enterPressed)
-                local val = tonumber(inputBox.Text)
-                if val and val >= 5 and val <= 60 then
-                    fpsCapValue = val
-                    config.fpsCap = val
-                    saveConfig()
-                    notify("FPS Cap", "Đã đặt "..val.." FPS", 2)
-                end
-                inputBox:Destroy()
-            end)
-        elseif relativeX >= 0.85 and relativeX <= 0.95 then
-            -- Vùng bật/tắt hiệu ứng cầu vồng
-            rainbowEnabled = not rainbowEnabled
-            config.rainbowEnabled = rainbowEnabled
-            saveConfig()
-            notify("Rainbow Effect", rainbowEnabled and "BẬT" or "TẮT", 2)
+            end
+        end
+    else
+        local defaultColor = Color3.new(1, 1, 1)
+        for _, elem in pairs(uiElements) do
+            if elem ~= crashToggle then
+                elem.TextColor3 = defaultColor
+            end
         end
     end
+    
+    arrangeElements()
+end
+
+-- Xử lý sự kiện click
+crashToggle.MouseButton1Click:Connect(function()
+    autoShutdownEnabled = not autoShutdownEnabled
+    config.autoCrashEnabled = autoShutdownEnabled
+    saveConfig()
+    notify("Auto Crash", autoShutdownEnabled and "BẬT" or "TẮT", 2)
+    updateUI()
 end)
 
--- Nút toggle FPS (đồng bộ)
-ToggleBtn.MouseButton1Click:Connect(function()
-    fpsLockEnabled = not fpsLockEnabled
-    ToggleBtn.Text = fpsLockEnabled and "FPS ON" or "FPS OFF"
+ramDisplay.MouseButton1Click:Connect(function()
+    local inputBox = Instance.new("TextBox")
+    inputBox.Size = UDim2.new(0, 100, 0, 30)
+    inputBox.Position = UDim2.new(0.5, -50, 0.5, -15)
+    inputBox.PlaceholderText = "Nhập MB (tối thiểu 500)"
+    inputBox.Text = tostring(memoryLimitMB)
+    inputBox.Parent = ScreenGui
+    inputBox:CaptureFocus()
+    inputBox.FocusLost:Connect(function(enterPressed)
+        local val = tonumber(inputBox.Text)
+        if val and val >= 500 then
+            memoryLimitMB = val
+            config.ramLimit = val
+            saveConfig()
+            notify("RAM Limit", "Đã đặt "..val.." MB", 2)
+        else
+            notify("Lỗi", "Giá trị không hợp lệ (phải >=500)", 2)
+        end
+        inputBox:Destroy()
+        updateUI()
+    end)
 end)
 
--- ================= CẬP NHẬT LIÊN TỤC =================
+lockCapValue.MouseButton1Click:Connect(function()
+    local inputBox = Instance.new("TextBox")
+    inputBox.Size = UDim2.new(0, 80, 0, 30)
+    inputBox.Position = UDim2.new(0.5, -40, 0.5, -15)
+    inputBox.PlaceholderText = "FPS Cap (5-60)"
+    inputBox.Text = tostring(fpsCapValue)
+    inputBox.Parent = ScreenGui
+    inputBox:CaptureFocus()
+    inputBox.FocusLost:Connect(function(enterPressed)
+        local val = tonumber(inputBox.Text)
+        if val and val >= 5 and val <= 60 then
+            fpsCapValue = val
+            config.fpsCap = val
+            saveConfig()
+            notify("FPS Cap", "Đã đặt "..val.." FPS", 2)
+        else
+            notify("Lỗi", "Giá trị không hợp lệ (5-60)", 2)
+        end
+        inputBox:Destroy()
+        updateUI()
+    end)
+end)
+
+-- Biến FPS
+local fps = 0
+local last = tick()
+local frames = 0
+
+-- Vòng lặp cập nhật liên tục
 RunService.RenderStepped:Connect(function(deltaTime)
     frames = frames + 1
     local now = tick()
@@ -295,27 +340,41 @@ RunService.RenderStepped:Connect(function(deltaTime)
         frames = 0
         last = now
     end
-    
-    -- Cập nhật màu sắc
-    if rainbowEnabled then
-        hueShift = (hueShift + deltaTime / rainbowSpeed) % 1
-        InfoLabel.TextColor3 = HSVtoRGB(hueShift, 0.9, 1.0)
-    else
-        InfoLabel.TextColor3 = Color3.new(1, 1, 1)
-    end
-    
-    updateInfoLabel()
+    updateUI()
 end)
 
--- ================= INIT =================
-task.spawn(function()
-    notify("BlackScreen+", "Đã tải config. Click vào thanh để tùy chỉnh.", 5)
-    if not game:IsLoaded() then
-        game.Loaded:Wait()
-    end
+-- Nút tắt/bật FPS Lock (góc phải dưới)
+local ToggleFPSBtn = Instance.new("TextButton")
+ToggleFPSBtn.Size = UDim2.new(0, 60, 0, 30)
+ToggleFPSBtn.Position = UDim2.new(1, -70, 1, -40)
+ToggleFPSBtn.BackgroundColor3 = Color3.new(0.2, 0.2, 0.2)
+ToggleFPSBtn.TextColor3 = Color3.new(1, 1, 1)
+ToggleFPSBtn.Text = fpsLockEnabled and "FPS ON" or "FPS OFF"
+ToggleFPSBtn.FontFace = Font.fromName("FredokaOne", Enum.FontWeight.Bold)
+ToggleFPSBtn.TextSize = 14
+ToggleFPSBtn.Parent = ScreenGui
+
+ToggleFPSBtn.MouseButton1Click:Connect(function()
+    fpsLockEnabled = not fpsLockEnabled
+    ToggleFPSBtn.Text = fpsLockEnabled and "FPS ON" or "FPS OFF"
+    notify("FPS Lock", fpsLockEnabled and "BẬT" or "TẮT", 2)
 end)
 
--- ================= LOAD EXTERNAL SCRIPT =================
+-- Khởi tạo
+updateUI()
+notify("BlackScreen+", "Đã tải config. Click vào các phần tử để tùy chỉnh.", 5)
+
+-- Load external script
+local function safeLoad(url, name)
+    local success, result = pcall(function()
+        return game:HttpGet(url)
+    end)
+    if success then
+        local func = loadstring(result)
+        if func then pcall(func) end
+    end
+end
+
 safeLoad(
     "https://raw.githubusercontent.com/canhongson/CanHongSon/refs/heads/main/loader.lua",
     "CanHongSon Loader"
