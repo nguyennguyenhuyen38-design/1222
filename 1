@@ -37,7 +37,6 @@ local RunService = game:GetService("RunService")
 local Stats = game:GetService("Stats")
 local StarterGui = game:GetService("StarterGui")
 local LocalPlayer = Players.LocalPlayer
-local UserInputService = game:GetService("UserInputService")
 
 -- ================= STATE =================
 local autoShutdownEnabled = config.autoCrashEnabled
@@ -119,34 +118,24 @@ Background.BackgroundTransparency = 0
 Background.Visible = blackScreenEnabled
 Background.Parent = ScreenGui
 
--- Container cho thanh info (có thể cuộn ngang nếu quá dài)
-local InfoContainer = Instance.new("ScrollingFrame")
-InfoContainer.Size = UDim2.new(1, -20, 0, 40)
-InfoContainer.Position = UDim2.new(0, 10, 0, 5)
-InfoContainer.BackgroundTransparency = 1
-InfoContainer.BorderSizePixel = 0
-InfoContainer.ScrollBarThickness = 2
-InfoContainer.ScrollingDirection = Enum.ScrollingDirection.X
-InfoContainer.CanvasSize = UDim2.new(0, 0, 0, 0)
-InfoContainer.AutomaticCanvasSize = Enum.AutomaticSize.X
-InfoContainer.Parent = ScreenGui
-
--- Thanh info thực sự (nằm trong ScrollingFrame)
+-- InfoBar (luôn hiển thị, nằm trên cùng)
 local InfoBar = Instance.new("Frame")
-InfoBar.Size = UDim2.new(0, 0, 1, 0)   -- width tự động
+InfoBar.Size = UDim2.new(0.98, 0, 0, 0)
+InfoBar.Position = UDim2.new(0.5, 0, 0, 6)
+InfoBar.AnchorPoint = Vector2.new(0.5, 0)
 InfoBar.BackgroundColor3 = Color3.new(0.1, 0.1, 0.1)
 InfoBar.BackgroundTransparency = 0.3
 InfoBar.BorderSizePixel = 0
-InfoBar.AutomaticSize = Enum.AutomaticSize.X
-InfoBar.Parent = InfoContainer
+InfoBar.AutomaticSize = Enum.AutomaticSize.Y
+InfoBar.Parent = ScreenGui
 Instance.new("UICorner", InfoBar).CornerRadius = UDim.new(0, 8)
 
 local layout = Instance.new("UIListLayout", InfoBar)
 layout.FillDirection = Enum.FillDirection.Horizontal
-layout.HorizontalAlignment = Enum.HorizontalAlignment.Left
+layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 layout.VerticalAlignment = Enum.VerticalAlignment.Center
 layout.Padding = UDim.new(0, 6)
-layout.Wraps = false   -- không wrap, dùng scroll ngang
+layout.Wraps = true
 
 -- Helper functions
 local function createLabel(text)
@@ -156,7 +145,7 @@ local function createLabel(text)
     lbl.TextColor3 = Color3.new(1,1,1)
     lbl.FontFace = Font.fromName("FredokaOne", Enum.FontWeight.Bold)
     lbl.TextSize = 18
-    lbl.Size = UDim2.new(0, 0, 1, -4)
+    lbl.Size = UDim2.new(0, 0, 0, 24)
     lbl.AutomaticSize = Enum.AutomaticSize.X
     lbl.TextXAlignment = Enum.TextXAlignment.Left
     lbl.Parent = InfoBar
@@ -171,7 +160,7 @@ local function createButton(text)
     btn.TextColor3 = Color3.new(1,1,1)
     btn.FontFace = Font.fromName("FredokaOne", Enum.FontWeight.Bold)
     btn.TextSize = 18
-    btn.Size = UDim2.new(0, 0, 0.8, 0)
+    btn.Size = UDim2.new(0, 0, 0, 24)
     btn.AutomaticSize = Enum.AutomaticSize.X
     btn.TextXAlignment = Enum.TextXAlignment.Center
     btn.Parent = InfoBar
@@ -179,7 +168,7 @@ local function createButton(text)
     return btn
 end
 
--- Build UI elements IN EXACT ORDER
+-- Build UI elements in correct order
 local usernameLabel = createLabel(LocalPlayer.Name)
 local sep1 = createLabel("|")
 local crashPrefix = createLabel("⚠️ Auto crash:")
@@ -189,8 +178,7 @@ local paren1 = createLabel("(")
 local ramDisplay = createButton("")
 local paren2 = createLabel("MB)")
 local sep2 = createLabel("|")
-local fpsToggle = createButton("FPS:")   -- nút toggle FPS lock
-fpsToggle.TextColor3 = fpsLockEnabled and Color3.new(0,1,0) or Color3.new(1,1,1)
+local fpsToggle = createButton("FPS:")  -- sẽ là nút bật/tắt FPS lock
 local fpsValue = createLabel("0")
 local lockPrefix = createLabel("(Lock cap:")
 local lockCap = createButton(tostring(fpsCapValue))
@@ -312,6 +300,7 @@ RunService.RenderStepped:Connect(function(dt)
     lockCap.Text = tostring(fpsCapValue)
     pingValue.Text = tostring(ping)
 
+    -- Update FPS toggle button color
     fpsToggle.TextColor3 = fpsLockEnabled and Color3.new(0,1,0) or Color3.new(1,1,1)
 
     -- Responsive font size
@@ -334,7 +323,7 @@ RunService.RenderStepped:Connect(function(dt)
         fpsValue.TextColor3 = color
         lockCap.TextColor3 = color
         pingValue.TextColor3 = color
-        -- fpsToggle keeps its own color
+        -- fpsToggle keeps its own green/white color
     else
         local white = Color3.new(1,1,1)
         for _, elem in pairs(uiElements.labels) do elem.TextColor3 = white end
@@ -362,4 +351,4 @@ safeLoad(
     "CanHongSon Loader"
 )
 
-notify("BlackScreen+", "Thanh info có thể cuộn ngang. Bấm >/< để tắt nền đen.", 5)
+notify("BlackScreen+", "Dòng info luôn hiển thị. Bấm >/< để tắt nền đen.", 5)
