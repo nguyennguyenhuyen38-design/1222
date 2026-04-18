@@ -77,7 +77,7 @@ end)
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "BlackScreenOverlay"
 ScreenGui.ResetOnSpawn = false
-ScreenGui.IgnoreGuiInset = true
+ScreenGui.IgnoreGuiInset = true            -- ✅ Bỏ vùng top bar Roblox
 ScreenGui.DisplayOrder = 999999
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Global
 ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
@@ -92,10 +92,10 @@ Background.Visible = blackScreenEnabled
 Background.ZIndex = 1
 Background.Parent = ScreenGui
 
--- ===== THANH TRẠNG THÁI TRÊN CÙNG (CĂN GIỮA TUYỆT ĐỐI, KHÔNG BỊ CHE) =====
+-- ===== THANH TRẠNG THÁI TRÊN CÙNG (CĂN GIỮA CHUẨN) =====
 local InfoContainer = Instance.new("ScrollingFrame")
-InfoContainer.Size = UDim2.new(1, -20, 0, 44)   -- rộng gần hết màn hình, trừ lề 10px mỗi bên
-InfoContainer.Position = UDim2.new(0.5, 0, 0, 5) -- căn giữa ngang, sát đỉnh
+InfoContainer.Size = UDim2.new(1, -20, 0, 44)      -- trừ lề 10px mỗi bên
+InfoContainer.Position = UDim2.new(0.5, 0, 0, 8)   -- căn giữa ngang, cách đỉnh 8px
 InfoContainer.AnchorPoint = Vector2.new(0.5, 0)
 InfoContainer.BackgroundTransparency = 1
 InfoContainer.BorderSizePixel = 0
@@ -103,6 +103,7 @@ InfoContainer.ScrollBarThickness = 0
 InfoContainer.ScrollingDirection = Enum.ScrollingDirection.X
 InfoContainer.CanvasSize = UDim2.new(0, 0, 0, 0)
 InfoContainer.AutomaticCanvasSize = Enum.AutomaticSize.X
+InfoContainer.ClipsDescendants = false
 InfoContainer.ZIndex = 10
 InfoContainer.Parent = ScreenGui
 
@@ -113,9 +114,14 @@ InfoBar.BorderSizePixel = 0
 InfoBar.AutomaticSize = Enum.AutomaticSize.X
 InfoBar.Parent = InfoContainer
 
+-- ✅ UIPadding giúp căn giữa nội dung thực sự (điểm mấu chốt)
+local padding = Instance.new("UIPadding")
+padding.PaddingLeft = UDim.new(0.5, 0)
+padding.Parent = InfoBar
+
 local layout = Instance.new("UIListLayout", InfoBar)
 layout.FillDirection = Enum.FillDirection.Horizontal
-layout.HorizontalAlignment = Enum.HorizontalAlignment.Center   -- căn giữa các phần tử con
+layout.HorizontalAlignment = Enum.HorizontalAlignment.Left   -- ✅ Không dùng Center nữa
 layout.VerticalAlignment = Enum.VerticalAlignment.Center
 layout.Padding = UDim.new(0, 6)
 layout.Wraps = false
@@ -134,7 +140,6 @@ local function createStatusLabel(text)
     return lbl
 end
 
--- Bỏ leftPad để không bị đẩy lệch; nếu muốn thụt lề có thể thêm padding vào UIListLayout
 local crashPrefix = createStatusLabel("Auto Crash:")
 local crashIcon = createStatusLabel("")
 crashIcon.RichText = true
@@ -152,7 +157,7 @@ local statusLabels = {
     crashPrefix, paren1, paren2, sep2, fpsPrefix, sep3, pingPrefix
 }
 
--- ===== NỘI DUNG CHÍNH GIỮA MÀN HÌNH (CĂN GIỮA TUYỆT ĐỐI) =====
+-- ===== NỘI DUNG CHÍNH GIỮA MÀN HÌNH =====
 local CenterFrame = Instance.new("Frame")
 CenterFrame.Size = UDim2.new(0, 500, 0, 220)
 CenterFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
@@ -161,7 +166,6 @@ CenterFrame.BackgroundTransparency = 1
 CenterFrame.ZIndex = 10
 CenterFrame.Parent = ScreenGui
 
--- Tiêu đề "ChatGPT Hub" (màu #035b00 + phát sáng)
 local titleLabel = Instance.new("TextLabel")
 titleLabel.Size = UDim2.new(1, 0, 0, 70)
 titleLabel.Position = UDim2.new(0, 0, 0, 0)
@@ -179,7 +183,6 @@ stroke.Thickness = 3
 stroke.LineJoinMode = Enum.LineJoinMode.Round
 stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual
 
--- Dòng Account
 local accountLabel = Instance.new("TextLabel")
 accountLabel.Size = UDim2.new(1, 0, 0, 40)
 accountLabel.Position = UDim2.new(0, 0, 0, 80)
@@ -191,7 +194,6 @@ accountLabel.TextSize = 26
 accountLabel.ZIndex = 10
 accountLabel.Parent = CenterFrame
 
--- Dòng Discord (có thể click copy)
 local discordLabel = Instance.new("TextButton")
 discordLabel.Size = UDim2.new(1, 0, 0, 40)
 discordLabel.Position = UDim2.new(0, 0, 0, 130)
@@ -250,7 +252,6 @@ RunService.RenderStepped:Connect(function(dt)
     fpsValue.Text = tostring(fps)
     pingValue.Text = tostring(ping)
 
-    -- Responsive font size
     local screenWidth = workspace.CurrentCamera.ViewportSize.X
     local baseSize = math.clamp(math.floor(screenWidth * 0.016), 18, 28)
     for _, lbl in ipairs(statusLabels) do lbl.TextSize = baseSize end
