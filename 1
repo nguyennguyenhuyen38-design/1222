@@ -117,95 +117,148 @@ local notifyDark = Color3.fromRGB(8, 20, 12)
 
 notifyImpl = function(title, text, dur, icon)
     local card = Instance.new("Frame")
-    card.Size = UDim2.new(1, 0, 0, 74)
+    card.Size = UDim2.new(1, 0, 0, 62)
     card.BackgroundColor3 = notifyDark
-    card.BackgroundTransparency = 0.08
+    card.BackgroundTransparency = 0.12
     card.BorderSizePixel = 0
     card.ClipsDescendants = true
     card.ZIndex = 201
     card.Parent = NotificationRoot
 
     local cardCorner = Instance.new("UICorner")
-    cardCorner.CornerRadius = UDim.new(0, 14)
+    cardCorner.CornerRadius = UDim.new(0, 16)
     cardCorner.Parent = card
 
     local cardStroke = Instance.new("UIStroke")
     cardStroke.Color = notifyPrimary
-    cardStroke.Thickness = 1.8
-    cardStroke.Transparency = 0.2
+    cardStroke.Thickness = 1.6
+    cardStroke.Transparency = 0.28
     cardStroke.Parent = card
 
-    local glow = Instance.new("Frame")
-    glow.Size = UDim2.new(0, 4, 1, 0)
-    glow.BackgroundColor3 = notifyPrimary
-    glow.BorderSizePixel = 0
-    glow.ZIndex = 202
-    glow.Parent = card
+    local cardGradient = Instance.new("UIGradient")
+    cardGradient.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(14, 38, 26)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(5, 16, 11))
+    })
+    cardGradient.Rotation = 8
+    cardGradient.Parent = card
+
+    local accent = Instance.new("Frame")
+    accent.Size = UDim2.new(0, 5, 1, 0)
+    accent.BackgroundColor3 = notifyPrimary
+    accent.BorderSizePixel = 0
+    accent.ZIndex = 202
+    accent.Parent = card
+
+    local accentFade = Instance.new("UIGradient")
+    accentFade.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, notifyPrimary),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(20, 120, 75))
+    })
+    accentFade.Rotation = 90
+    accentFade.Parent = accent
+
+    local progressTrack = Instance.new("Frame")
+    progressTrack.Size = UDim2.new(1, 0, 0, 3)
+    progressTrack.Position = UDim2.new(0, 0, 1, -3)
+    progressTrack.BackgroundColor3 = Color3.fromRGB(10, 32, 21)
+    progressTrack.BorderSizePixel = 0
+    progressTrack.ZIndex = 202
+    progressTrack.Parent = card
+
+    local progressFill = Instance.new("Frame")
+    progressFill.Size = UDim2.new(1, 0, 1, 0)
+    progressFill.BackgroundColor3 = notifyPrimary
+    progressFill.BorderSizePixel = 0
+    progressFill.ZIndex = 203
+    progressFill.Parent = progressTrack
+
+    local progressGradient = Instance.new("UIGradient")
+    progressGradient.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(80, 255, 165)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 180, 90))
+    })
+    progressGradient.Parent = progressFill
 
     local iconImage = Instance.new("ImageLabel")
-    iconImage.Size = UDim2.new(0, 42, 0, 42)
+    iconImage.Size = UDim2.new(0, 40, 0, 40)
     iconImage.Position = UDim2.new(0, 12, 0.5, 0)
     iconImage.AnchorPoint = Vector2.new(0, 0.5)
-    iconImage.BackgroundTransparency = 1
+    iconImage.BackgroundTransparency = 0.1
+    iconImage.BackgroundColor3 = Color3.fromRGB(12, 32, 22)
     iconImage.Image = icon or LOGO_IMAGE_ID
-    iconImage.ScaleType = Enum.ScaleType.Fit
+    iconImage.ScaleType = Enum.ScaleType.Crop
     iconImage.ZIndex = 203
     iconImage.Parent = card
 
     local iconMask = Instance.new("UICorner")
-    iconMask.CornerRadius = UDim.new(1, 0)
+    iconMask.CornerRadius = UDim.new(0, 12)
     iconMask.Parent = iconImage
 
     local titleLabelN = Instance.new("TextLabel")
-    titleLabelN.Size = UDim2.new(1, -66, 0, 28)
-    titleLabelN.Position = UDim2.new(0, 60, 0, 8)
+    titleLabelN.Size = UDim2.new(1, -66, 0, 24)
+    titleLabelN.Position = UDim2.new(0, 60, 0, 6)
     titleLabelN.BackgroundTransparency = 1
     titleLabelN.Text = title or "Thông báo"
     titleLabelN.TextColor3 = notifyPrimary
     titleLabelN.FontFace = Font.fromName("FredokaOne", Enum.FontWeight.Bold)
-    titleLabelN.TextSize = 20
+    titleLabelN.TextSize = 18
     titleLabelN.TextXAlignment = Enum.TextXAlignment.Left
     titleLabelN.ZIndex = 203
     titleLabelN.Parent = card
 
     local textLabelN = Instance.new("TextLabel")
-    textLabelN.Size = UDim2.new(1, -66, 0, 26)
-    textLabelN.Position = UDim2.new(0, 60, 0, 37)
+    textLabelN.Size = UDim2.new(1, -66, 0, 24)
+    textLabelN.Position = UDim2.new(0, 60, 0, 31)
     textLabelN.BackgroundTransparency = 1
     textLabelN.Text = text or ""
     textLabelN.TextColor3 = Color3.new(1, 1, 1)
     textLabelN.FontFace = Font.fromName("FredokaOne", Enum.FontWeight.Regular)
-    textLabelN.TextSize = 16
-    textLabelN.TextWrapped = true
+    textLabelN.TextSize = 14
+    textLabelN.TextWrapped = false
     textLabelN.TextXAlignment = Enum.TextXAlignment.Left
     textLabelN.TextYAlignment = Enum.TextYAlignment.Center
     textLabelN.ZIndex = 203
     textLabelN.Parent = card
 
     local hold = dur or 2.5
-    card.Position = UDim2.new(1, 40, 0, 0)
+    local scale = Instance.new("UIScale")
+    scale.Scale = 0.92
+    scale.Parent = card
+
+    card.Position = UDim2.new(1, 52, 0, 0)
     card.BackgroundTransparency = 1
     iconImage.ImageTransparency = 1
     titleLabelN.TextTransparency = 1
     textLabelN.TextTransparency = 1
     cardStroke.Transparency = 1
-    glow.BackgroundTransparency = 1
+    accent.BackgroundTransparency = 1
+    progressTrack.BackgroundTransparency = 1
+    progressFill.BackgroundTransparency = 1
 
-    TweenService:Create(card, TweenInfo.new(0.28, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Position = UDim2.new(0, 0, 0, 0), BackgroundTransparency = 0.08}):Play()
-    TweenService:Create(iconImage, TweenInfo.new(0.2), {ImageTransparency = 0}):Play()
-    TweenService:Create(titleLabelN, TweenInfo.new(0.2), {TextTransparency = 0}):Play()
-    TweenService:Create(textLabelN, TweenInfo.new(0.2), {TextTransparency = 0}):Play()
-    TweenService:Create(cardStroke, TweenInfo.new(0.2), {Transparency = 0.2}):Play()
-    TweenService:Create(glow, TweenInfo.new(0.2), {BackgroundTransparency = 0}):Play()
+    TweenService:Create(card, TweenInfo.new(0.34, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Position = UDim2.new(0, 0, 0, 0), BackgroundTransparency = 0.12}):Play()
+    TweenService:Create(scale, TweenInfo.new(0.34, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
+    TweenService:Create(iconImage, TweenInfo.new(0.24), {ImageTransparency = 0}):Play()
+    TweenService:Create(titleLabelN, TweenInfo.new(0.24), {TextTransparency = 0}):Play()
+    TweenService:Create(textLabelN, TweenInfo.new(0.24), {TextTransparency = 0}):Play()
+    TweenService:Create(cardStroke, TweenInfo.new(0.24), {Transparency = 0.28}):Play()
+    TweenService:Create(accent, TweenInfo.new(0.24), {BackgroundTransparency = 0}):Play()
+    TweenService:Create(progressTrack, TweenInfo.new(0.24), {BackgroundTransparency = 0}):Play()
+    TweenService:Create(progressFill, TweenInfo.new(0.24), {BackgroundTransparency = 0}):Play()
+    TweenService:Create(progressFill, TweenInfo.new(hold, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut), {Size = UDim2.new(0, 0, 1, 0)}):Play()
+    TweenService:Create(cardStroke, TweenInfo.new(1.1, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {Transparency = 0.5}):Play()
 
     task.delay(hold, function()
         if not card.Parent then return end
-        TweenService:Create(card, TweenInfo.new(0.24, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Position = UDim2.new(1, 36, 0, 0), BackgroundTransparency = 1}):Play()
+        TweenService:Create(card, TweenInfo.new(0.26, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Position = UDim2.new(1, 42, 0, 0), BackgroundTransparency = 1}):Play()
+        TweenService:Create(scale, TweenInfo.new(0.24, Enum.EasingStyle.Sine, Enum.EasingDirection.In), {Scale = 0.94}):Play()
         TweenService:Create(iconImage, TweenInfo.new(0.2), {ImageTransparency = 1}):Play()
         TweenService:Create(titleLabelN, TweenInfo.new(0.2), {TextTransparency = 1}):Play()
         TweenService:Create(textLabelN, TweenInfo.new(0.2), {TextTransparency = 1}):Play()
         TweenService:Create(cardStroke, TweenInfo.new(0.2), {Transparency = 1}):Play()
-        TweenService:Create(glow, TweenInfo.new(0.2), {BackgroundTransparency = 1}):Play()
+        TweenService:Create(accent, TweenInfo.new(0.2), {BackgroundTransparency = 1}):Play()
+        TweenService:Create(progressTrack, TweenInfo.new(0.2), {BackgroundTransparency = 1}):Play()
+        TweenService:Create(progressFill, TweenInfo.new(0.2), {BackgroundTransparency = 1}):Play()
         task.wait(0.26)
         card:Destroy()
     end)
@@ -384,7 +437,7 @@ LogoButton.Visible = true
 LogoButton.Parent = ScreenGui
 
 local logoCorner = Instance.new("UICorner")
-logoCorner.CornerRadius = UDim.new(1, 0)
+logoCorner.CornerRadius = UDim.new(0, 20)
 logoCorner.Parent = LogoButton
 
 local logoStroke = Instance.new("UIStroke")
@@ -450,7 +503,7 @@ end)
 
 local function createParticle(position, color)
     local p = Instance.new("Frame")
-    p.Size = UDim2.new(0, math.random(5, 10), 0, math.random(5, 10))
+    p.Size = UDim2.new(0, math.random(4, 10), 0, math.random(4, 10))
     p.AnchorPoint = Vector2.new(0.5, 0.5)
     p.Position = position
     p.BackgroundColor3 = color
@@ -466,28 +519,31 @@ end
 
 local function burstTransition(fromPos, toPos, pieceCount, duration)
     for _ = 1, pieceCount do
-        local particle = createParticle(fromPos, Color3.fromRGB(math.random(120, 255), 255, math.random(120, 255)))
-        local midOffset = Vector2.new(math.random(-140, 140), math.random(-110, 110))
-        local endOffset = Vector2.new(math.random(-24, 24), math.random(-24, 24))
+        local particle = createParticle(fromPos, Color3.fromRGB(math.random(70, 190), math.random(230, 255), math.random(120, 210)))
+        local midOffset = Vector2.new(math.random(-190, 190), math.random(-130, 130))
+        local endOffset = Vector2.new(math.random(-30, 30), math.random(-30, 30))
         local midPos = UDim2.new(toPos.X.Scale, toPos.X.Offset + midOffset.X, toPos.Y.Scale, toPos.Y.Offset + midOffset.Y)
         local endPos = UDim2.new(toPos.X.Scale, toPos.X.Offset + endOffset.X, toPos.Y.Scale, toPos.Y.Offset + endOffset.Y)
 
         local tweenA = TweenService:Create(
             particle,
-            TweenInfo.new(duration * 0.45, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-            {Position = midPos, BackgroundTransparency = 0.25}
+            TweenInfo.new(duration * 0.4, Enum.EasingStyle.Cubic, Enum.EasingDirection.Out),
+            {Position = midPos, BackgroundTransparency = 0.1, Rotation = math.random(-180, 180)}
         )
         local tweenB = TweenService:Create(
             particle,
-            TweenInfo.new(duration * 0.55, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
-            {Position = endPos, BackgroundTransparency = 1, Size = UDim2.new(0, 2, 0, 2)}
+            TweenInfo.new(duration * 0.6, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
+            {Position = endPos, BackgroundTransparency = 1, Size = UDim2.new(0, 1, 0, 1), Rotation = math.random(-360, 360)}
         )
-        tweenA:Play()
-        tweenA.Completed:Connect(function()
-            tweenB:Play()
-        end)
-        tweenB.Completed:Connect(function()
-            particle:Destroy()
+        task.delay(math.random() * 0.08, function()
+            if not particle.Parent then return end
+            tweenA:Play()
+            tweenA.Completed:Connect(function()
+                tweenB:Play()
+            end)
+            tweenB.Completed:Connect(function()
+                particle:Destroy()
+            end)
         end)
     end
 end
@@ -510,7 +566,7 @@ local function toggleBlackScreen()
             obj.TextTransparency = 1
         end
         stroke.Transparency = 1
-        burstTransition(logoPos, centerPos, 38, 0.55)
+        burstTransition(logoPos, centerPos, 64, 0.62)
         tweenCenterContent(0, 0.45)
         TweenService:Create(LogoButton, TweenInfo.new(0.2), {ImageTransparency = 0.15, BackgroundTransparency = 0.4}):Play()
         task.wait(0.5)
@@ -520,7 +576,7 @@ local function toggleBlackScreen()
         -- Nội dung giữa màn hình tan mảnh, gom lại thành logo
         LogoButton.ImageTransparency = 1
         LogoButton.BackgroundTransparency = 1
-        burstTransition(centerPos, logoPos, 38, 0.55)
+        burstTransition(centerPos, logoPos, 64, 0.62)
         TweenService:Create(LogoButton, TweenInfo.new(0.45, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {ImageTransparency = 0, BackgroundTransparency = 0.25}):Play()
         tweenCenterContent(1, 0.2)
         task.wait(0.25)
