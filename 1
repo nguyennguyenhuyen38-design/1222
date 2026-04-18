@@ -92,17 +92,21 @@ Background.Parent = ScreenGui
 
 -- Thanh info nhỏ gọn nằm góc trên bên PHẢI (vị trí khoanh đỏ trong ảnh)
 local InfoContainer = Instance.new("ScrollingFrame")
-InfoContainer.Size = UDim2.new(0, 300, 0, 36)   -- chiều rộng cố định đủ chứa text
-InfoContainer.Position = UDim2.new(1, -10, 0, 5)
-InfoContainer.AnchorPoint = Vector2.new(1, 0)
+InfoContainer.Size = UDim2.new(0, 300, 0, 36)
+
+-- ✅ Đưa lên giữa đỉnh
+InfoContainer.Position = UDim2.new(0.5, 0, 0, 5)
+InfoContainer.AnchorPoint = Vector2.new(0.5, 0)
+
 InfoContainer.BackgroundTransparency = 1
 InfoContainer.BorderSizePixel = 0
-InfoContainer.ScrollBarThickness = 0           -- ẩn thanh cuộn
+InfoContainer.ScrollBarThickness = 0
 InfoContainer.ScrollingDirection = Enum.ScrollingDirection.X
 InfoContainer.CanvasSize = UDim2.new(0, 0, 0, 0)
 InfoContainer.AutomaticCanvasSize = Enum.AutomaticSize.X
 InfoContainer.Parent = ScreenGui
 
+-- Thanh chứa text
 local InfoBar = Instance.new("Frame")
 InfoBar.Size = UDim2.new(0, 0, 1, 0)
 InfoBar.BackgroundTransparency = 1
@@ -110,13 +114,17 @@ InfoBar.BorderSizePixel = 0
 InfoBar.AutomaticSize = Enum.AutomaticSize.X
 InfoBar.Parent = InfoContainer
 
-local layout = Instance.new("UIListLayout", InfoBar)
+-- Layout
+local layout = Instance.new("UIListLayout")
+layout.Parent = InfoBar
 layout.FillDirection = Enum.FillDirection.Horizontal
-layout.HorizontalAlignment = Enum.HorizontalAlignment.Right   -- canh phải
+
+-- ✅ Căn giữa thay vì dồn phải
+layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 layout.VerticalAlignment = Enum.VerticalAlignment.Center
+
 layout.Padding = UDim.new(0, 4)
 layout.Wraps = false
-
 -- Hàm tạo Label với font lớn hơn một chút
 local function createLabel(text)
     local lbl = Instance.new("TextLabel")
