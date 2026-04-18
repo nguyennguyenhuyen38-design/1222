@@ -91,16 +91,32 @@ Background.Visible = blackScreenEnabled
 Background.Parent = ScreenGui
 
 -- Container thanh info (căn giữa đỉnh)
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "MyUI"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.IgnoreGuiInset = true -- QUAN TRỌNG: bỏ vùng top bar Roblox
+ScreenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
+
 local InfoContainer = Instance.new("ScrollingFrame")
-InfoContainer.Size = UDim2.new(0.95, 0, 0, 44)   -- cao hơn chút cho chữ to
-InfoContainer.Position = UDim2.new(0.5, 0, 0, 5)
+InfoContainer.Name = "InfoContainer"
+
+-- Size
+InfoContainer.Size = UDim2.new(0.95, 0, 0, 44)
+
+-- Căn giữa ngang + nằm sát top (không bị che)
+InfoContainer.Position = UDim2.new(0.5, 0, 0, 8)
 InfoContainer.AnchorPoint = Vector2.new(0.5, 0)
+
+-- Style
 InfoContainer.BackgroundTransparency = 1
 InfoContainer.BorderSizePixel = 0
 InfoContainer.ScrollBarThickness = 2
 InfoContainer.ScrollingDirection = Enum.ScrollingDirection.X
+
+-- Auto canvas
 InfoContainer.CanvasSize = UDim2.new(0, 0, 0, 0)
 InfoContainer.AutomaticCanvasSize = Enum.AutomaticSize.X
+
 InfoContainer.Parent = ScreenGui
 
 -- Thanh info (nền trong suốt)
