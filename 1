@@ -3,6 +3,18 @@ getgenv()._LOADED_COMBINED_SCRIPT = true
 
 -- ================= CONFIG =================
 local fpsLockEnabled = true
+local autoShutdownEnabled = true
+local memoryLimitMB = 2500
+local shutdownCheckInterval = 5
+
+-- 🎨 CẤU HÌNH HIỆU ỨNG MỚI 🎨
+local rainbowTextEnabled = true
+local rainbowSpeed = 1.2
+-- 🔤 CẤU HÌNH PHÔNG CHỮ THỰC TẾ (KHÔNG CÒN ẢO TƯỞNG) 🔤
+-- Mày chỉ được phép chọn một trong các font có sẵn trong Engine Roblox.
+-- Một số lựa chọn phổ biến và đẹp mắt: 
+-- "FredokaOne", "Gotham", "SourceSansPro", "Roboto", "Arial", "BuilderSans"
+local CHOSEN_FONT = "FredokaOne"  -- Thay đổi tên font ở đây
 
 -- ================= SERVICES =================
 local Players = game:GetService("Players")
@@ -39,6 +51,27 @@ local function notify(title, text, duration)
     end)
 end
 
+-- ================= AUTO SHUTDOWN MONITOR =================
+task.spawn(function()
+    while true do
+        task.wait(shutdownCheckInterval)
+        if autoShutdownEnabled then
+            pcall(function()
+                local currentMem = Stats:GetTotalMemoryUsageMb()
+                if currentMem >= memoryLimitMB then
+                    notify(
+                        "⚠️ CẢNH BÁO RAM VƯỢT NGƯỠNG",
+                        string.format("RAM đang ở mức %d MB (giới hạn %d MB). Tự động thoát game sau 3 giây...", currentMem, memoryLimitMB),
+                        5
+                    )
+                    task.wait(3)
+                    game:Shutdown()
+                end
+            end)
+        end
+    end
+end)
+
 -- ================= FPS CONTROL (Background Lock) =================
 task.delay(3, function()
     task.spawn(function()
@@ -54,6 +87,26 @@ task.delay(3, function()
         end
     end)
 end)
+
+-- ================= UTIL: HSV TO RGB (Rainbow Effect) =================
+local function HSVtoRGB(h, s, v)
+    h = h % 1
+    local r, g, b
+    local i = math.floor(h * 6)
+    local f = h * 6 - i
+    local p = v * (1 - s)
+    local q = v * (1 - f * s)
+    local t = v * (1 - (1 - f) * s)
+    i = i % 6
+    if i == 0 then r, g, b = v, t, p
+    elseif i == 1 then r, g, b = q, v, p
+    elseif i == 2 then r, g, b = p, v, t
+    elseif i == 3 then r, g, b = p, q, v
+    elseif i == 4 then r, g, b = t, p, v
+    elseif i == 5 then r, g, b = v, p, q
+    end
+    return Color3.new(r, g, b)
+end
 
 -- ================= BLACK SCREEN UI =================
 local ScreenGui = Instance.new("ScreenGui")
@@ -78,8 +131,10 @@ Label.TextYAlignment = Enum.TextYAlignment.Center
 Label.TextSize = 36
 Label.Parent = ScreenGui
 
+-- 🔤 THIẾT LẬP PHÔNG CHỮ THỰC TẾ (KHÔNG LỪA DỐI) 🔤
 pcall(function()
-    Label.FontFace = Font.new("rbxasset://fonts/families/NunitoRounded.json", Enum.FontWeight.ExtraBold)
+    -- Sử dụng Font.fromName với tên font chính xác
+    Label.FontFace = Font.fromName(CHOSEN_FONT, Enum.FontWeight.ExtraBold)
 end)
 
 local ToggleBtn = Instance.new("TextButton")
@@ -114,12 +169,13 @@ end)
 
 updateIcon()
 
--- ================= FPS / PING / RAM DISPLAY =================
+-- ================= FPS / PING / RAM DISPLAY (CÓ RAINBOW) =================
 local fps = 0
 local last = tick()
 local frames = 0
+local hueShift = 0
 
-RunService.RenderStepped:Connect(function()
+RunService.RenderStepped:Connect(function(deltaTime)
     frames = frames + 1
     local now = tick()
     if now - last >= 1 then
@@ -127,16 +183,40 @@ RunService.RenderStepped:Connect(function()
         frames = 0
         last = now
     end
+    
     if fpsLockEnabled then
         local mem = math.floor(Stats:GetTotalMemoryUsageMb())
         local ping = math.floor(LocalPlayer:GetNetworkPing() * 1000)
+        
+        local textColor
+        if rainbowTextEnabled then
+            hueShift = (hueShift + deltaTime / rainbowSpeed) % 1
+            textColor = HSVtoRGB(hueShift, 0.9, 1.0)
+        else
+            if mem >= memoryLimitMB * 0.9 then
+                textColor = Color3.new(1, 0.3, 0.3)
+            else
+                textColor = Color3.new(1, 1, 1)
+            end
+        end
+        
+        Label.TextColor3 = textColor
         Label.Text = "FPS: " .. fps .. "\nPING: " .. ping .. " ms\nRAM: " .. mem .. " MB"
+        
+        if not rainbowTextEnabled and mem >= memoryLimitMB * 0.9 then
+            Label.TextColor3 = Color3.new(1, 0.2, 0.2)
+        end
     end
 end)
 
 -- ================= INIT =================
 task.spawn(function()
-    notify("BlackScreen", "FPS Lock Ready - Click > to toggle", 3)
+    notify(
+        "BlackScreen",
+        string.format("FPS Lock Ready - Font: %s\nClick > để tắt\nTự động văng khi RAM đạt %d MB", 
+            CHOSEN_FONT, memoryLimitMB),
+        5
+    )
     if not game:IsLoaded() then
         game.Loaded:Wait()
     end
