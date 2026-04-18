@@ -92,10 +92,10 @@ Background.Visible = blackScreenEnabled
 Background.ZIndex = 1
 Background.Parent = ScreenGui
 
--- ===== THANH TRẠNG THÁI TRÊN CÙNG (GIỮA ĐỈNH) =====
+-- ===== THANH TRẠNG THÁI TRÊN CÙNG (CĂN GIỮA TUYỆT ĐỐI, KHÔNG BỊ CHE) =====
 local InfoContainer = Instance.new("ScrollingFrame")
-InfoContainer.Size = UDim2.new(0.95, 0, 0, 44)
-InfoContainer.Position = UDim2.new(0.5, 0, 0, 5)
+InfoContainer.Size = UDim2.new(1, -20, 0, 44)   -- rộng gần hết màn hình, trừ lề 10px mỗi bên
+InfoContainer.Position = UDim2.new(0.5, 0, 0, 5) -- căn giữa ngang, sát đỉnh
 InfoContainer.AnchorPoint = Vector2.new(0.5, 0)
 InfoContainer.BackgroundTransparency = 1
 InfoContainer.BorderSizePixel = 0
@@ -115,7 +115,7 @@ InfoBar.Parent = InfoContainer
 
 local layout = Instance.new("UIListLayout", InfoBar)
 layout.FillDirection = Enum.FillDirection.Horizontal
-layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+layout.HorizontalAlignment = Enum.HorizontalAlignment.Center   -- căn giữa các phần tử con
 layout.VerticalAlignment = Enum.VerticalAlignment.Center
 layout.Padding = UDim.new(0, 6)
 layout.Wraps = false
@@ -134,7 +134,7 @@ local function createStatusLabel(text)
     return lbl
 end
 
-local leftPad = createStatusLabel("        ")
+-- Bỏ leftPad để không bị đẩy lệch; nếu muốn thụt lề có thể thêm padding vào UIListLayout
 local crashPrefix = createStatusLabel("Auto Crash:")
 local crashIcon = createStatusLabel("")
 crashIcon.RichText = true
@@ -149,13 +149,12 @@ local pingPrefix = createStatusLabel("Ping:")
 local pingValue = createStatusLabel("0")
 
 local statusLabels = {
-    leftPad, crashPrefix, paren1, paren2, sep2, fpsPrefix, sep3, pingPrefix
+    crashPrefix, paren1, paren2, sep2, fpsPrefix, sep3, pingPrefix
 }
 
 -- ===== NỘI DUNG CHÍNH GIỮA MÀN HÌNH (CĂN GIỮA TUYỆT ĐỐI) =====
 local CenterFrame = Instance.new("Frame")
 CenterFrame.Size = UDim2.new(0, 500, 0, 220)
--- Đặt chính giữa màn hình (50% ngang, 50% dọc) với AnchorPoint 0.5,0.5
 CenterFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
 CenterFrame.AnchorPoint = Vector2.new(0.5, 0.5)
 CenterFrame.BackgroundTransparency = 1
@@ -174,7 +173,6 @@ titleLabel.TextScaled = true
 titleLabel.ZIndex = 10
 titleLabel.Parent = CenterFrame
 
--- Hiệu ứng phát sáng (UIStroke)
 local stroke = Instance.new("UIStroke", titleLabel)
 stroke.Color = Color3.fromHex("00ff00")
 stroke.Thickness = 3
@@ -247,7 +245,6 @@ RunService.RenderStepped:Connect(function(dt)
     local mem = math.floor(Stats:GetTotalMemoryUsageMb())
     local ping = math.floor(LocalPlayer:GetNetworkPing() * 1000)
 
-    -- Thanh trạng thái
     crashIcon.Text = autoCrashEnabled and '<font color="#00FF00">✅</font>' or '<font color="#FF0000">❌</font>'
     ramLabel.Text = string.format("%d/%d", mem, RAM_LIMIT_MB)
     fpsValue.Text = tostring(fps)
@@ -262,7 +259,6 @@ RunService.RenderStepped:Connect(function(dt)
     fpsValue.TextSize = baseSize
     pingValue.TextSize = baseSize
 
-    -- Màu cầu vồng cho toàn bộ (trừ title)
     if RAINBOW_ENABLED then
         local hue = (tick() % RAINBOW_SPEED) / RAINBOW_SPEED
         local color = HSVtoRGB(hue, 0.9, 1.0)
