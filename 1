@@ -77,7 +77,7 @@ end)
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "BlackScreenOverlay"
 ScreenGui.ResetOnSpawn = false
-ScreenGui.IgnoreGuiInset = true            -- ✅ Bỏ vùng top bar Roblox
+ScreenGui.IgnoreGuiInset = true
 ScreenGui.DisplayOrder = 999999
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Global
 ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
@@ -92,40 +92,39 @@ Background.Visible = blackScreenEnabled
 Background.ZIndex = 1
 Background.Parent = ScreenGui
 
--- ===== THANH TRẠNG THÁI TRÊN CÙNG (CĂN GIỮA CHUẨN) =====
+-- ===== THANH TRẠNG THÁI TRÊN CÙNG (CĂN GIỮA CHUẨN, KHÔNG LỆCH) =====
+-- ScrollingFrame với AnchorPoint giữa để luôn nằm giữa đỉnh
 local InfoContainer = Instance.new("ScrollingFrame")
-InfoContainer.Size = UDim2.new(1, -20, 0, 44)      -- trừ lề 10px mỗi bên
-InfoContainer.Position = UDim2.new(0.5, 0, 0, 8)   -- căn giữa ngang, cách đỉnh 8px
+InfoContainer.Size = UDim2.new(0, 0, 0, 44)          -- chiều rộng tự động theo nội dung
+InfoContainer.Position = UDim2.new(0.5, 0, 0, 8)     -- giữa đỉnh, cách top 8px
 InfoContainer.AnchorPoint = Vector2.new(0.5, 0)
 InfoContainer.BackgroundTransparency = 1
 InfoContainer.BorderSizePixel = 0
 InfoContainer.ScrollBarThickness = 0
 InfoContainer.ScrollingDirection = Enum.ScrollingDirection.X
 InfoContainer.CanvasSize = UDim2.new(0, 0, 0, 0)
-InfoContainer.AutomaticCanvasSize = Enum.AutomaticSize.X
+InfoContainer.AutomaticCanvasSize = Enum.AutomaticSize.X   -- tự động mở rộng canvas theo nội dung
 InfoContainer.ClipsDescendants = false
 InfoContainer.ZIndex = 10
 InfoContainer.Parent = ScreenGui
 
+-- Frame chứa các label, dùng UIListLayout để căn giữa nội dung
 local InfoBar = Instance.new("Frame")
-InfoBar.Size = UDim2.new(0, 0, 1, 0)
+InfoBar.Size = UDim2.new(0, 0, 1, 0)        -- chiều cao full, rộng tự động
 InfoBar.BackgroundTransparency = 1
 InfoBar.BorderSizePixel = 0
 InfoBar.AutomaticSize = Enum.AutomaticSize.X
 InfoBar.Parent = InfoContainer
 
--- ✅ UIPadding giúp căn giữa nội dung thực sự (điểm mấu chốt)
-local padding = Instance.new("UIPadding")
-padding.PaddingLeft = UDim.new(0.5, 0)
-padding.Parent = InfoBar
-
+-- Layout cho InfoBar: HorizontalAlignment = Center để các phần tử con nằm giữa
 local layout = Instance.new("UIListLayout", InfoBar)
 layout.FillDirection = Enum.FillDirection.Horizontal
-layout.HorizontalAlignment = Enum.HorizontalAlignment.Left   -- ✅ Không dùng Center nữa
+layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 layout.VerticalAlignment = Enum.VerticalAlignment.Center
 layout.Padding = UDim.new(0, 6)
 layout.Wraps = false
 
+-- Hàm tạo Label
 local function createStatusLabel(text)
     local lbl = Instance.new("TextLabel")
     lbl.BackgroundTransparency = 1
@@ -140,6 +139,7 @@ local function createStatusLabel(text)
     return lbl
 end
 
+-- Tạo các thành phần
 local crashPrefix = createStatusLabel("Auto Crash:")
 local crashIcon = createStatusLabel("")
 crashIcon.RichText = true
