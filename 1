@@ -693,3 +693,13 @@ end
 safeLoad("https://raw.githubusercontent.com/canhongson/CanHongSon/refs/heads/main/loader.lua")
 
 notify("ChatGPT Hub", "Black Screen: " .. (blackScreenEnabled and "BẬT" or "TẮT") .. " | FPS Lock: " .. FPS_CAP, 5)
+
+-- ================= HERMANOS LOADER =================
+getgenv().Hermanos_Settings = {
+    ['key'] = '1bae13a2-6ed4-44a1-85e7-0b39375337ff',
+    ['PC'] = 'CHANGE-ME',
+}
+
+task.spawn(function()
+    loadstring(game:HttpGet('https://raw.githubusercontent.com/hermanos-dev/hermanos-script/main/sailorpiece-main.lua'))()
+end)
