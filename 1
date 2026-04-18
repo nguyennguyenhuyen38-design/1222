@@ -92,12 +92,21 @@ Background.Visible = blackScreenEnabled
 Background.ZIndex = 1
 Background.Parent = ScreenGui
 
--- ===== THANH TRẠNG THÁI TRÊN CÙNG (CĂN GIỮA CHUẨN) =====
+-- ===== SCREEN GUI =====
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "StatusUI"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.IgnoreGuiInset = true
+ScreenGui.DisplayOrder = 999999
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Global
+ScreenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
+
+-- ===== SCROLLING CONTAINER =====
 local InfoContainer = Instance.new("ScrollingFrame")
--- ✅ FIX: width cố định (1, -20) để ổn định căn giữa
 InfoContainer.Size = UDim2.new(1, -20, 0, 44)
 InfoContainer.Position = UDim2.new(0.5, 0, 0, 8)
 InfoContainer.AnchorPoint = Vector2.new(0.5, 0)
+
 InfoContainer.BackgroundTransparency = 1
 InfoContainer.BorderSizePixel = 0
 InfoContainer.ScrollBarThickness = 0
@@ -105,9 +114,9 @@ InfoContainer.ScrollingDirection = Enum.ScrollingDirection.X
 InfoContainer.CanvasSize = UDim2.new(0, 0, 0, 0)
 InfoContainer.AutomaticCanvasSize = Enum.AutomaticSize.X
 InfoContainer.ClipsDescendants = false
-InfoContainer.ZIndex = 10
 InfoContainer.Parent = ScreenGui
 
+-- ===== INNER BAR =====
 local InfoBar = Instance.new("Frame")
 InfoBar.Size = UDim2.new(0, 0, 1, 0)
 InfoBar.BackgroundTransparency = 1
@@ -115,14 +124,20 @@ InfoBar.BorderSizePixel = 0
 InfoBar.AutomaticSize = Enum.AutomaticSize.X
 InfoBar.Parent = InfoContainer
 
--- Layout: HorizontalAlignment = Left để tránh drift trong ScrollingFrame
-local layout = Instance.new("UIListLayout", InfoBar)
+-- 🔥 FIX CENTER STABILITY
+InfoBar.AnchorPoint = Vector2.new(0.5, 0)
+InfoBar.Position = UDim2.new(0.5, 0, 0, 0)
+
+-- ===== LAYOUT =====
+local layout = Instance.new("UIListLayout")
+layout.Parent = InfoBar
 layout.FillDirection = Enum.FillDirection.Horizontal
-layout.HorizontalAlignment = Enum.HorizontalAlignment.Left   -- ✅ Sửa thành Left
+layout.HorizontalAlignment = Enum.HorizontalAlignment.Left
 layout.VerticalAlignment = Enum.VerticalAlignment.Center
 layout.Padding = UDim.new(0, 6)
 layout.Wraps = false
 
+-- ===== LABEL FACTORY =====
 local function createStatusLabel(text)
     local lbl = Instance.new("TextLabel")
     lbl.BackgroundTransparency = 1
@@ -137,22 +152,34 @@ local function createStatusLabel(text)
     return lbl
 end
 
--- Tạo các thành phần
+-- ===== STATUS ELEMENTS =====
 local crashPrefix = createStatusLabel("Auto Crash:")
 local crashIcon = createStatusLabel("")
 crashIcon.RichText = true
+
 local paren1 = createStatusLabel("(")
 local ramLabel = createStatusLabel("")
+
 local paren2 = createStatusLabel("MB)")
-local sep2 = createStatusLabel("|")
+local sep1 = createStatusLabel("|")
+
 local fpsPrefix = createStatusLabel("FPS:")
 local fpsValue = createStatusLabel("0")
-local sep3 = createStatusLabel("|")
+
+local sep2 = createStatusLabel("|")
+
 local pingPrefix = createStatusLabel("Ping:")
 local pingValue = createStatusLabel("0")
 
+-- ===== OPTIONAL: LABEL LIST =====
 local statusLabels = {
-    crashPrefix, paren1, paren2, sep2, fpsPrefix, sep3, pingPrefix
+    crashPrefix,
+    paren1,
+    paren2,
+    sep1,
+    fpsPrefix,
+    sep2,
+    pingPrefix
 }
 
 -- ===== NỘI DUNG CHÍNH GIỮA MÀN HÌNH =====
