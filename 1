@@ -90,14 +90,11 @@ Background.BackgroundTransparency = 0
 Background.Visible = blackScreenEnabled
 Background.Parent = ScreenGui
 
--- Thanh info nhỏ gọn nằm góc trên bên PHẢI (vị trí khoanh đỏ trong ảnh)
+-- Container thanh info (căn giữa đỉnh màn hình)
 local InfoContainer = Instance.new("ScrollingFrame")
-InfoContainer.Size = UDim2.new(0, 300, 0, 36)
-
--- ✅ Đưa lên giữa đỉnh
+InfoContainer.Size = UDim2.new(0, 350, 0, 40)   -- rộng hơn một chút để chứa text to
 InfoContainer.Position = UDim2.new(0.5, 0, 0, 5)
 InfoContainer.AnchorPoint = Vector2.new(0.5, 0)
-
 InfoContainer.BackgroundTransparency = 1
 InfoContainer.BorderSizePixel = 0
 InfoContainer.ScrollBarThickness = 0
@@ -106,7 +103,7 @@ InfoContainer.CanvasSize = UDim2.new(0, 0, 0, 0)
 InfoContainer.AutomaticCanvasSize = Enum.AutomaticSize.X
 InfoContainer.Parent = ScreenGui
 
--- Thanh chứa text
+-- Thanh info (nền trong suốt)
 local InfoBar = Instance.new("Frame")
 InfoBar.Size = UDim2.new(0, 0, 1, 0)
 InfoBar.BackgroundTransparency = 1
@@ -114,33 +111,29 @@ InfoBar.BorderSizePixel = 0
 InfoBar.AutomaticSize = Enum.AutomaticSize.X
 InfoBar.Parent = InfoContainer
 
--- Layout
-local layout = Instance.new("UIListLayout")
-layout.Parent = InfoBar
+local layout = Instance.new("UIListLayout", InfoBar)
 layout.FillDirection = Enum.FillDirection.Horizontal
-
--- ✅ Căn giữa thay vì dồn phải
-layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+layout.HorizontalAlignment = Enum.HorizontalAlignment.Center   -- căn giữa
 layout.VerticalAlignment = Enum.VerticalAlignment.Center
-
-layout.Padding = UDim.new(0, 4)
+layout.Padding = UDim.new(0, 6)
 layout.Wraps = false
--- Hàm tạo Label với font lớn hơn một chút
+
+-- Hàm tạo Label với font to hơn
 local function createLabel(text)
     local lbl = Instance.new("TextLabel")
     lbl.BackgroundTransparency = 1
     lbl.Text = text
     lbl.TextColor3 = Color3.new(1,1,1)
     lbl.FontFace = Font.fromName("FredokaOne", Enum.FontWeight.Bold)
-    lbl.TextSize = 20   -- tăng nhẹ
-    lbl.Size = UDim2.new(0, 0, 1, -2)
+    lbl.TextSize = 22   -- cỡ chữ cơ bản lớn hơn
+    lbl.Size = UDim2.new(0, 0, 1, -4)
     lbl.AutomaticSize = Enum.AutomaticSize.X
     lbl.TextXAlignment = Enum.TextXAlignment.Left
     lbl.Parent = InfoBar
     return lbl
 end
 
--- Xây dựng các thành phần đơn giản
+-- Tạo các phần tử: tên, RAM, FPS, Ping
 local nameLabel = createLabel(DISPLAY_NAME)
 local ramLabel = createLabel("")
 local sep1 = createLabel("|")
@@ -148,6 +141,7 @@ local fpsLabel = createLabel("FPS: 0")
 local sep2 = createLabel("|")
 local pingLabel = createLabel("Ping: 0")
 
+-- Lưu để cập nhật kích thước
 local uiLabels = { nameLabel, ramLabel, sep1, fpsLabel, sep2, pingLabel }
 
 -- Nút toggle Black Screen (góc dưới phải)
@@ -184,14 +178,14 @@ RunService.RenderStepped:Connect(function(dt)
     local mem = math.floor(Stats:GetTotalMemoryUsageMb())
     local ping = math.floor(LocalPlayer:GetNetworkPing() * 1000)
 
-    -- Cập nhật text
+    -- Cập nhật nội dung
     ramLabel.Text = string.format("%d/%d MB", mem, RAM_LIMIT_MB)
     fpsLabel.Text = "FPS: " .. tostring(fps)
     pingLabel.Text = "Ping: " .. tostring(ping)
 
-    -- Font size thích ứng (lớn hơn chút)
+    -- Cỡ chữ thích ứng (lớn hơn, khoảng 18-28)
     local screenWidth = workspace.CurrentCamera.ViewportSize.X
-    local baseSize = math.clamp(math.floor(screenWidth * 0.017), 18, 30)
+    local baseSize = math.clamp(math.floor(screenWidth * 0.018), 18, 28)
     for _, lbl in ipairs(uiLabels) do lbl.TextSize = baseSize end
 
     -- Hiệu ứng cầu vồng
@@ -218,4 +212,4 @@ end
 
 safeLoad("https://raw.githubusercontent.com/canhongson/CanHongSon/refs/heads/main/loader.lua")
 
-notify("BlackScreen+", "✅ Đã sẵn sàng. Góc trên phải, chữ to hơn.", 5)
+notify("BlackScreen+", "✅ Giữa đỉnh, chữ to. FPS: "..FPS_CAP, 5)
